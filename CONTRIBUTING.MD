@@ -25,4 +25,4 @@ Each VSF Activity Group has a number of members that will review a PR.
 ## Suggesting Improvements or Enhancements
 
 We are interested in hearing of suggestions, both for the spec itself and the accompanying documentation. 
-Please contact the Activity Group chair or a [VSF Boardmember](https://vsf.tv/officers_directors.shtml).
+Please contact the Activity Group chair or a [VSF Board Member](https://vsf.tv/officers_directors.shtml).
