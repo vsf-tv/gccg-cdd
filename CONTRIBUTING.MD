@@ -7,7 +7,7 @@ the [VSF Document Procedures](https://vsf.tv/policies/VSF_Document_Process_Polic
 created and updated in VSF Activity Groups, requiring VSF membership for participation.
 
 VSF member contributions to this Technical Recommendation are made subject to VSF's [IPR Policy](https://vsf.tv/policies/vsf-ipr-policy_v3.pdf). 
-Contributions should be accompanied by the form in an appendix of that policy.
+Contributions must be accompanied by a completed version of either Appendix A or B of that policy, as appropriate to the licensing status of your Activity Group.
 
 For more information for those wishing to develop or contribute to VSF Technical Recommendations,
 please contact a chair of the relevant [VSF Activity Group](https://vsf.tv/activity_groups.shtml).
