@@ -1,0 +1,360 @@
+# Copyright 2025 Amazon.com Inc
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import argparse
+import time
+import signal
+import subprocess
+import os
+import json
+import requests
+from requests.exceptions import Timeout
+
+INITIAL_CONFIG_ID = ""  # identical to the SDK initial configuration update_id when no config has been obtained.
+
+
+#  TODO: Status json is read from a file and only a few params are updated.  Make status update complete and
+#    based on values from the underlying encoder/decoder/.  Possibly add RTP support.
+
+
+# Client API endpoints.
+PORT: int = 8603  # Ensure this matches the port used to start the discovery client SDK.
+CONNECT = f"http://127.0.0.1:{PORT}/connect"
+DISCONNECT = f"http://127.0.0.1:{PORT}/disconnect"
+REPORT_STATUS = f"http://127.0.0.1:{PORT}/report_status"
+GET_CONFIGURATION = f"http://127.0.0.1:{PORT}/get_configuration"
+
+# From project source root.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+STATUS_JSON_FILE = os.path.join(current_dir, "example_status.json")
+
+
+class Encoder(object):
+    """
+    A basic FFMPEG encoder that will start/stop using the available webcam.
+
+    Starts/Stops based on the srt_settings supplied by a schema compliant configuration.
+
+    Note: Only handles SRT params (currently).
+    """
+
+    def __init__(self):
+        self.process = None
+        self.protocol = None
+        self.srt_settings = None
+
+    def running(self):
+        # Carefully Start/Stop the ffmpeg encoder by monitoring the process. Don't want to start multiple.
+        if self.process is None:
+            return False
+        return self.process.poll() is None
+
+    def get_encoder_status(self):
+        """
+        (Currently) This application simply reads and makes minor changes to status file.
+        Eventually this application should generate a complete status based on the current state of the system
+        and the ffmpeg encoder.
+
+        Returns:
+            A instance-schema compliant status payload that represents the current encoder status.
+        """
+
+        with open(STATUS_JSON_FILE, "r") as f:
+            status_payload = json.load(f)
+            if not self.running():
+                status_payload["status"]["channels"][0]["state"] = "IDLE"
+            else:
+                status_payload["status"]["channels"][0]["state"] = "ACTIVE"
+            return status_payload
+
+    def start(self, str_settings: dict):
+
+        # A client application should restart if params change while running.
+        if not self.running():
+            print(f"************* Starting *****************")
+            ip = str_settings["ip"]
+            port = str_settings["port"]
+            stream_id = str_settings["stream_id"]
+            cmd = f"ffmpeg -f avfoundation -framerate 30 -video_size 640x480 -i 0 -vcodec libx264 -f mpegts srt://{ip}:{port}/{stream_id}"
+            print(f"command: {cmd}")
+            self.process = subprocess.Popen(
+                cmd, shell=True, preexec_fn=os.setsid
+            )  # Detach from parent.
+        else:
+            print("Already running")
+
+    def stop(self):
+
+        print("************* Stopping *****************")
+
+        if (
+            self.process is not None and self.process.poll() is None
+        ):  # Check if process is still running.
+            try:
+                # First try SIGINT (Ctrl+C)
+                self.process.send_signal(signal.SIGINT)
+                print(f"Sent SIGINT signal to process {self.process.pid}")
+
+                # Wait for a short time to see if the process exits.
+                try:
+                    self.process.wait(timeout=5)  # Wait up to 5 seconds.
+                except subprocess.TimeoutExpired:
+                    # If SIGINT didn't work, try SIGTERM.
+                    print(f"Process didn't respond to SIGINT, trying SIGTERM...")
+                    self.process.send_signal(signal.SIGTERM)
+
+                    try:
+                        self.process.wait(timeout=5)  # Wait again for SIGTERM.
+                    except subprocess.TimeoutExpired:
+                        print(f"Process didn't respond to SIGTERM either")
+                        # Optionally, you could use SIGKILL as a last resort.
+                        # self.process.kill()  # This is equivalent to SIGKILL.
+
+                self.process = None
+
+            except ProcessLookupError:
+                print(f"Process {self.process.pid} may have already terminated.")
+
+        else:
+            print("Already stopped")
+
+    def handle_update(self, update_message: dict):
+        """
+        Handles an update message from the underlying application.
+
+        Args:
+            update_message: A schema compliant configuration message.
+
+        Note: This function comprehends the instance schema that it provided to the SDK on SDK Start.
+               The SDK validated the service-provided configuration message conforms to the schema.
+               As a result,we can confidently parse the configuration JSON here.
+        """
+        if not update_message:
+            print("No update available")
+            return
+
+        print(f"Got an update: {update_message}")
+
+        try:
+            state = (
+                update_message.get("configuration", {})
+                .get("channels", [{}])[0]
+                .get("state")
+            )
+            srt_settings = (
+                update_message.get("configuration", {})
+                .get("channels", [{}])[0]
+                .get("output_configuration", {})
+                .get("srt")
+            )
+
+            if state == "IDLE":
+                print(f"Calling stop")
+                self.stop()
+            if state == "ACTIVE" and srt_settings:
+                print(f"Calling Start")
+                if self.running() and self.srt_settings == srt_settings:
+                    print("Already running with same settings")
+                    return  # No change, ignore
+
+                # Stop then re-Start if the settings changed.
+                if (
+                    self.running()
+                    and self.srt_settings
+                    and self.srt_settings != srt_settings
+                ):
+                    self.stop()
+
+                self.srt_settings = srt_settings
+                self.start(srt_settings)
+
+        except Exception as e:
+            print(f"Unable to process command: {e}")
+
+
+class ClientApplication(object):
+    """
+    A basic client application that will start/stop using the available webcam.
+    """
+
+    def __init__(self):
+        self.encoder = Encoder()
+        self.running = True
+        self.latest_configuration_id = INITIAL_CONFIG_ID
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def signal_handler(self, signum, frame):
+        """
+        Handle shutdown signals gracefully.
+        Applications should make sure they call disconnect() when they close inform the service
+        the client has gone away.
+        """
+        print("Received shutdown signal, cleaning up...")
+        response = requests.get(DISCONNECT, timeout=1)
+        self.running = False
+
+    def report_status(self):
+        """
+        Report the current state of the system and the ffmpeg encoder.
+        TODO:  This application will provide a complete status based on the actual application status.
+        """
+        with open(STATUS_JSON_FILE, "r") as f:
+            status_payload = self.encoder.get_encoder_status()
+            response = requests.post(REPORT_STATUS, json=status_payload, timeout=5)
+            if response.status_code == 200:
+                sdk_response = parse_api_response(response)
+                print(
+                    f"report_status Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
+                    f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
+                    f" message: {sdk_response.get('message')}"
+                )
+
+    def get_configuration(self):
+        """
+        Obtains a configuration message.
+        Checks if the update_id changed, if so applies the change, otherwise ignores.
+        """
+        response = requests.get(GET_CONFIGURATION, timeout=5)
+        if response.status_code == 200:
+            sdk_response = parse_api_response(response)
+            print(
+                f"get_configuration Success: {sdk_response.get('success')} State: {sdk_response.get('state')}"
+                f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
+                f" message: {sdk_response.get('message')} configuration: {sdk_response.get('configuration')}"
+            )
+            # See: get_configuration() response.
+            configuration: dict = sdk_response.get("configuration", {})
+            update_id: str = configuration.get("update_id", "")
+            configuration_payload: dict = configuration.get("payload", {})
+
+            # ID is an arbitrary string. Check for a difference.
+            # If there is no change (ie already processed based on the ID) then do nothing.
+            if update_id != self.latest_configuration_id:
+                print(f"New update. update_id: {update_id}")
+                self.latest_configuration_id = update_id
+                self.encoder.handle_update(configuration_payload)
+
+    def run_loop(self, host_id: str):
+        """
+        Guidance for client applications: (see: documentation: SDK API, SDK Reference Design).
+
+        connect() API Response will include the SDK 'state'.
+            PAIRING: Display state and Display pairing_code to the user.
+            CONNECTING: Display state to the user. The SDK is attempting to connect,
+                        if the network is open, usually takes < 1s.
+            CONNECTED:  Display state to the user. The SDK is connected to the service
+                        and operating normally. Calling connect() while already CONNECTED is a
+                        valid approach and can simplify client application logic.
+            DISCONNECTED: Display state to the user. See: Handling Revoked or Expired Certs below.
+
+        Run Loop: Client Application options include:
+            1) loop over connect(), get_configuration(), report_status() (every ~3 seconds is OK).
+
+            2) loop over connect() until CONNECTED(), then loop over get_configuration(), report_status(),
+               if Response(state) == DISCONNECTED, go back to looping over connect().
+
+            For either 1 or 2, optionally report_status() only when something interesting has
+                changed on the device. Consider that minor differences like a small bitrate change
+                is probably not worth reporting.
+
+        Handling Revoked or Expired Certs:
+            This is indicated by Response(state) == DISCONNECTED, and
+            connect() API Response[error][type] == CertificatesError or CertificatesInvalid
+            (see: documentation: SDK API: Exceptions).
+
+            Client Application options include:
+            1) Leave DISCONNECTED, inform the user the device was revoked, user can invoke deregister (recommended).
+            2) Application to automatically call deregister(). User-involvement still required to re-pair the device.
+
+            Note: Both 'Run Loop' options above will automatically restart the pairing process once deregister()
+            deletes the now expired or revoked certs.
+
+        """
+        while self.running:
+            try:
+                print("........................")
+                response = requests.get(CONNECT, params={"host_id": host_id}, timeout=5)
+                if response.status_code == 200:
+                    sdk_response = parse_api_response(response)
+                    print(
+                        f"run_loop Success: {sdk_response.get('success')} State: {sdk_response.get('state')} "
+                        f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')} "
+                        f" message: {sdk_response.get('message')}"
+                    )
+
+                    #
+                    # PAIRING: If the SDK returns PAIRING then present the pairing_code to the user so the device
+                    #          can be claimed in the service.
+                    #
+                    if (
+                        sdk_response.get("success")
+                        and sdk_response.get("state") == "PAIRING"  # see (SDK models)
+                    ):
+                        print(
+                            f"Device is not paired. Pairing Code: {sdk_response.get('pairing_code')} Expires in: {sdk_response.get('expires')}s"
+                        )
+                    #
+                    # CONNECTED: send any status update, check for an updated configuration.
+                    #
+                    if sdk_response.get("success") and sdk_response.get("state") in [
+                        "CONNECTED",
+                        "RECONNECTING",
+                    ]:  # See (SDK models.py).
+                        # The service will respond appropriately for any state but best to only call these
+                        # when the SDK is CONNECTED or RECONNECTING.
+                        self.get_configuration()
+                        self.report_status()
+
+                    #
+                    # TODO: Handle revoked/expired certs
+                    #
+
+                else:
+                    print(f"Connection failed. Status code: {response.status_code}")
+            except Timeout:
+                print("Connection timed out. Retrying...")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+            time.sleep(3)
+
+
+def parse_api_response(response) -> dict:
+
+    resp = json.loads(response.content.decode("utf-8"))
+    return resp
+
+
+def main(host_id: str):
+    c = ClientApplication()
+    print(f"Connecting to: {host_id}")
+    c.run_loop(host_id=host_id)
+
+
+if __name__ == "__main__":
+    """
+    Starts the application reference design program. Expects a client SDK process to be running already.
+    Communicates with that process via the client SDK API.
+    """
+    parser = argparse.ArgumentParser(
+        description="Client Device Discovery Application Reference Design",
+        epilog="Documentation: https://github.com/vsf-tv/gccg-cdd/README.md",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--host_id", required=True, type=str, help="Enter a host_id to connect"
+    )
+    args = parser.parse_args()
+
+    main(host_id=args.host_id)
