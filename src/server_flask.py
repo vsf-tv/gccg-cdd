@@ -18,13 +18,6 @@ from discovery_sdk import CddSdk
 import argparse
 import signal
 import sys
-from models import (
-    ConnectResponse,
-    DisconnectResponse,
-    ReportStatusResponse,
-    GetConfigurationResponse,
-)
-
 
 class CddSdkManager:
     """

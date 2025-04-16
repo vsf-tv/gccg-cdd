@@ -31,8 +31,25 @@ The following python external packages are required
 - requests
 - cryptography
 
-## Minimum Python version
-3.10
+## System Requirements
+- Python 3.10 or newer
+- RAM: SDK Consumes around 37MB
+- File Read/Write
+
+
+## Security
+The SDK persists an identity and X509 credentials obtained during the pairing process in a path provided by the
+host-system (the device on which the SDK is installed). While the protocol implements rotation to limit certificate
+lifespan, securing credentials is the host-system's responsibility. The following are some best practices for
+embedded systems:
+- Verify Code Integrity: Allow only signed and trusted software run (bootloader, operating system, firmware).
+- Hardware Root of Trust: Utilize hardware-based security mechanisms.
+   (like Secure Elements or Trusted Platform Modules - TPMs) to establish an immutable root of trust for the boot process.
+- Locking down remote access such as disabling SSH.
+- Access Controls Tied to User/Process Context.  Linux SE for example.
+- File system encryption such as LUKS (Linux Unified Key Setup) and fscrypt, Encrypting File System (EFS) and BitLocker.
+- Regular Security Audits and Testing.
+
 
 ### Work in progress...
 
@@ -44,10 +61,12 @@ The following python external packages are required
 - Add unit and integration test
 - Add Instance Schema rules validator
 
-## Prerequisite: FFMPEG
-The Application Reference Design (ARD) is implemented by: src/application_reference/application.py. 
-It requires ffmpeg executable be available in PATH. FYI: Older versions of ffmpeg might not support SRT directly.  
-Before proceeding, ensure it is installed and test it directly using the following CLI command.
+
+## Application Reference Design Prerequisite: FFMPEG
+To be clear, this is not a SDK requirement, but used by the Application Reference Design (ARD) to simulate an
+encoder device. Older versions of FFMPEG might not support SRT directly. Before proceeding, ensure it is
+installed and test it directly using the following CLI command.
+
 
 ```bash
 Start an SRT listener endpoint and get the ip:port:stream_id params.  One convenient option is
@@ -63,7 +82,9 @@ On running the following, your web-cam should start, and video streamed via SRT 
 >cont-c  # to stop the stream
 ```
 
-## Prerequisite: API Caller Application
+## Application Reference Design Prerequisite: API Caller Application
+To be clear, this is not a SDK requirement, but used in the README instructions to make API calls on the VSF Host
+Service Test Endpoint.  In practice, a host service will provide its own API access mechanism, GUI, etc.
 Download or use your favorite API Caller application such as Postman, Hoppscotch, Insomnia, etc.
 The application you chose must be able to make API calls formatted with headers for AWS Credentials
 We will use this API Caller application to interact with the VSF Host Test Endpoint, claim the device, get status
