@@ -1,0 +1,27 @@
+{
+  "configuration": {
+    "channels": [
+      {
+        "id": "Channel1",
+        "state": "ACTIVE",
+        "output_configuration": {
+          "srt": {
+            "srt_type": "caller",
+            "ip": "1.2.3.1",
+            "port": 2304,
+            "latency_ms": 1000,
+            "encryption": {},
+            "stream_id": "a-valid-stream-id"
+          }
+        },
+        "video_configuration": {
+          "codec": {
+            "h264": {
+              "profile": "main"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

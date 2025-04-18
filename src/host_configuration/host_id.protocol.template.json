@@ -1,0 +1,6 @@
+{
+  "SERVICE_ID": "str",
+  "SERVICE_NAME": "str",
+  "PAIRING_URL": "str",
+  "AUTH_URL": "str"
+}
