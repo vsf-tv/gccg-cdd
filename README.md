@@ -390,6 +390,45 @@ Expected SDK and ARD behavior
 <The ARD should stop streaming.>
 ```
 
+### Test Cert Rotation
+The SDK supports credential (cert) rotation.  In practice, a Host Service will rotate and expire certs automatically.
+For testing purposes, a rotation API is provided that allows manual cert rotation.  Connected devices will process the
+rotation message and reconnected with updated certs.  Offline devices will not pick up any rotated credentials and risk
+expiration.  Rotation is an essential practice that reduces the threat posed by stolen credentials.  The rotation
+interval is determined by the Host Service and likely set by the customer within a min/max range.
+
+Note: Cert rotation is complete on the SDK, but auto-rotation and expiration is currently WIP in the VSF Host Service
+Test Endpoint.  This manual API allows testing while those features are added.
+
+
+```bash
+Rotate Credentials and Describe Device to check the new expiration.
+
+Request Path: <base_endpoint>/dev/credentials/{device-id}
+Request Type: PUT
+
+Expected Host Service Response:
+{
+    "device_id": ...,
+    "message": "Credentials successfully rotated.",
+    "error": ""
+}
+
+Get Status to see the updated credential expiration
+Request Path:  <base_endpoint>/dev/device/{device-id}
+Request Type: GET
+e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01
+
+Expected Host Service Response:
+{
+    "device_id": ...,
+    ...
+
+    "cert_expiration": "23d 20h 63m",
+}
+
+```
+
 ### De-Register or Un-claim the device
 ```bash
 # This API is WIP and will be available soon. 
