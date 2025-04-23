@@ -57,7 +57,6 @@ embedded systems:
 - Add deregister API
 - Add standardized logging 
 - Add telemetry
-- Add cert rotation
 - Add unit and integration test
 - Add Instance Schema rules validator
 
