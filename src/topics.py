@@ -34,6 +34,9 @@ class Topics(object):
             # Subscribe: receiving schema-compliant configuration messages.
             self.update_configuration = host_settings.sub_update_topic
 
+            # Subscribe: informs the client about the most current certs available.
+            self.update_certs = host_settings.sub_update_certs_topic
+
             # Publish: sending scoped-schema to the service.
             self.report_schema = host_settings.pub_report_schema_topic
 
@@ -41,6 +44,7 @@ class Topics(object):
             self.report_status = host_settings.pub_report_status_topic
 
             print(f"Topics: Sub: {self.update_configuration}")
+            print(f"Topics: Sub: {self.update_certs}")
             print(f"Topics: Pub: {self.report_schema}")
             print(f"Topics: Pub: {self.report_status}")
         except Exception as e:

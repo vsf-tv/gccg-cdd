@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import time
 from threading import Lock
 import json
 from jsonschema import validate
@@ -28,6 +28,8 @@ from custom_exceptions import (
     ReportStatusError,
     ReportSchemaError,
     SystemIntegrationError,
+    CertificatesRotationError,
+    CertificatesError
 )
 
 from pairing import Pairing
@@ -511,7 +513,16 @@ class CddSdk(object):
                 callback=self._update_configuration_callback,
             )
         except Exception as e:
-            raise ConnectError(details="Client is unable to subscribe")
+            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_configuration}.")
+
+        try:
+            self.mqtt_client.subscribe(topic=topics.update_certs)
+            self.mqtt_client.message_callback_add(
+                sub=topics.update_certs,
+                callback=self._update_certs_callback,
+            )
+        except Exception as e:
+            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_certs}.")
 
         self._report_schema()  # Service will ignore all but the first schema reported by this device_id.
         self._schema_delivered = True
@@ -565,15 +576,6 @@ class CddSdk(object):
                 transport="tcp",
             )
 
-            ssl_context = ssl_alpn(
-                ca_cert=self.certs.ca_cert_file,
-                device_cert=self.certs.device_cert_file,
-                private_key=self.certs.priv_key_file,
-                iot_protocol_name=self.certs.host_settings.iot_protocol_name,
-            )
-
-            self.mqtt_client.tls_set_context(context=ssl_context)
-
             self.mqtt_client.on_connect = self._on_connect
             self.mqtt_client.on_message = self._on_message
             self.mqtt_client.on_disconnect = self._on_disconnect
@@ -584,14 +586,7 @@ class CddSdk(object):
             self.mqtt_client.max_inflight_messages_set(1)
             self.mqtt_client.max_queued_messages_set(1)
 
-            print(f"Connecting to: {self.certs.uri}")
-
-            # Port 443 enables MQTT over HTTPs and transparency in most network environments.
-            self.mqtt_client.connect(
-                host=self.certs.uri,
-                port=443,
-                keepalive=self.certs.host_settings.mqtt_keepalive_seconds,
-            )
+            self._connect()
 
             # Mqtt client manages its own execution thread. It will run under the current
             # thread and stay alive to handle pub/sub activities, keep alive, etc.
@@ -620,13 +615,29 @@ class CddSdk(object):
                 ),
             )
 
+    def _connect(self):
+        ssl_context = ssl_alpn(
+            ca_cert=self.certs.ca_cert_file,
+            device_cert=self.certs.device_cert_file,
+            private_key=self.certs.priv_key_file,
+            iot_protocol_name=self.certs.host_settings.iot_protocol_name,
+        )
+        self.mqtt_client.tls_set_context(context=ssl_context)
+        print(f"Connecting to: {self.certs.uri}")
+        # Port 443 enables MQTT over HTTPs and transparency in most network environments.
+        self.mqtt_client.connect(
+            host=self.certs.uri,
+            port=443,
+            keepalive=self.certs.host_settings.mqtt_keepalive_seconds,
+        )
+
     def _load_certs(self):
         return self.certs.read_from_filesystem()
 
     def _update_configuration_callback(self, client, userdata, message):
         """
-        Called asynchronously in response to a new message received on the Configuration Update persistent topic.
-        Generally an update here means the service just updated the configuration payload (or we just (re) connected).
+        Called asynchronously in response to a new message received on the SUB_UPDATE_TOPIC persistent topic.
+        An update here means the service just updated the configuration payload (or we just connected).
         The service expects the client to handle an updated configuration right away when the client is connected.
 
         Args:
@@ -656,6 +667,50 @@ class CddSdk(object):
             # Persist the error in the Configuration class to inform the next get_configuration() Response.
             self.configuration.update_configuration(callback_error=True)
             raise InvalidConfigurationError(details=f"Schema Validation Error: {e}")
+
+    def _update_certs_callback(self, client, userdata, message):
+        """
+        Called asynchronously in response to a new message received on the SUB_UPDATE_CERTS_TOPIC persistent topic.
+        An update here means the service just updated the credentials payload (or we just connected).
+        If different from the current device_cert, the client must immediately replace the device_cert, disconnect and
+        reconnect.
+
+        Args:
+             client, userdata: unused metadata supplied by the mqtt client
+             message: str device-cert PEM str format.
+
+        Side Effect:
+            Will result in a brief DISCONNECTED, CONNECTING state to any API call.
+
+        """
+        try:
+            device_cert_pem_str = message.payload.decode("utf-8")
+            assert device_cert_pem_str, "Empty cert provided by rotation."
+            assert device_cert_pem_str.startswith(
+                "-----BEGIN CERTIFICATE-----"
+            ), "Invalid cert provided by rotation."
+        except Exception as e:
+            raise CertificatesRotationError(details="Msg: {e}.")
+
+        try:
+            with open(self.certs.device_cert_file, "r") as file:
+                current_cert_pem_str = file.read()
+                if device_cert_pem_str == current_cert_pem_str:
+                    print("No change in device cert.")
+                    return
+                print("Updating device credentials")
+
+                # Replace the device cert and disconnect/reconnect.
+                self.certs.update_device_cert_file(device_cert_pem_str)
+                host_id = self.host_id
+                # Caller may see DISCONNECTED/CONNECTING while this processes...may take a few seconds.
+                print(f"Momentarily reconnecting using new credentials.")
+                self.disconnect()
+                time.sleep(1)
+                self.connect(host_id)
+
+        except Exception as e:
+            raise CertificatesRotationError(details="Msg: {e}.")
 
     def _report_schema(self):
         """

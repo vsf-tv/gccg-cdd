@@ -40,7 +40,7 @@ class SDKBaseException(Exception):
         super().__init__(message, details)
         self.message = message
         self.details = details
-        print(f"Raised an exception: message: {self.message} details: {self.details}")
+        print(f"Raised an exception: message: {self.message} details: {self.details}.")
 
 
 #
@@ -50,7 +50,7 @@ class SDKBaseException(Exception):
 
 class SystemIntegrationError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Configuration error"
+        message = "Configuration error."
         super().__init__(message, details)
 
 
@@ -61,7 +61,7 @@ class SystemIntegrationError(SDKBaseException):
 
 class ClientAPIThrottle(SDKBaseException):
     def __init__(self, details=""):
-        message = "Request throttled. Too many requests"
+        message = "Request throttled. Too many requests."
         super().__init__(message, details)
 
 
@@ -73,14 +73,14 @@ class ClientAPIThrottle(SDKBaseException):
 # Can not connect to the service MQTT broker, likely a network issue.
 class ConnectError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Connection error (MQTT)"
+        message = "Connection error (MQTT)."
         super().__init__(message, details)
 
 
 # Timed out connecting to the service MQTT broker, likely a network issue.
 class ConnectTimeout(SDKBaseException):
     def __init__(self, details=""):
-        message = "Connection timed out (MQTT)"
+        message = "Connection timed out (MQTT)."
         super().__init__(message, details)
 
 
@@ -92,21 +92,21 @@ class ConnectTimeout(SDKBaseException):
 # Unknown pairing error, including 4xx rejecting the SDK pairing request.
 class PairingError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Unknown pairing failure"
+        message = "Unknown pairing failure."
         super().__init__(message, details)
 
 
 # The pairing service return 5xx.
 class PairingServiceError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Pairing service is experiencing an internal error"
+        message = "Pairing service is experiencing an internal error."
         super().__init__(message, details)
 
 
 # The payload from the pairing service is invalid and can't be parsed.
 class PairingServiceResponseError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Pairing service response was not valid"
+        message = "Pairing service response was not valid."
         super().__init__(message, details)
 
 
@@ -115,14 +115,14 @@ class PairingServiceResponseError(SDKBaseException):
 # Network timeout during connection establishment.
 class PairingServiceRequestConnectionError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Pairing unable to connect to the service"
+        message = "Pairing unable to connect to the service."
         super().__init__(message, details)
 
 
 # Common causes: Server is overloaded, Network congestion, Server processing taking too long.
 class PairingServiceRequestTimeoutError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Pairing timed out connecting to the service"
+        message = "Pairing timed out connecting to the service."
         super().__init__(message, details)
 
 
@@ -133,7 +133,7 @@ class PairingServiceRequestTimeoutError(SDKBaseException):
 
 class CertificatesError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Unknown certificates error"
+        message = "Unknown certificates error."
         super().__init__(message, details)
 
 
@@ -144,21 +144,29 @@ class CertificatesInvalid(SDKBaseException):
     """
 
     def __init__(self, details=""):
-        message = "Certificates: Not authorized to connect to the service"
+        message = "Certificates: Not authorized to connect to the service."
         super().__init__(message, details)
 
 
 class CertificatesReadError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Certificates can not be read from the filesystem"
+        message = "Certificates can not be read from the filesystem."
         super().__init__(message, details)
 
 
 class CertificatesWriteError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Certificates can not be saved to the filesystem"
+        message = "Certificates can not be saved to the filesystem."
         super().__init__(message, details)
 
+
+class CertificatesRotationError(SDKBaseException):
+    """
+    Raised when there is a problem rotating (changing / extending expiration of) credentials.
+    """
+    def __init__(self, details=""):
+        message = "Certificates can not be rotated."
+        super().__init__(message, details)
 
 #
 # Publishing
@@ -167,19 +175,19 @@ class CertificatesWriteError(SDKBaseException):
 
 class MQTTPublishError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Publish failed"
+        message = "Publish failed."
         super().__init__(message, details)
 
 
 class ReportStatusError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Publish: Report status failed"
+        message = "Publish: Report status failed."
         super().__init__(message, details)
 
 
 class ReportSchemaError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Publish: Report schema failed"
+        message = "Publish: Report schema failed."
         super().__init__(message, details)
 
 
@@ -190,18 +198,18 @@ class ReportSchemaError(SDKBaseException):
 
 class InvalidConfigurationError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Invalid configuration message from the service was rejected"
+        message = "Invalid configuration message from the service was rejected."
         super().__init__(message, details)
 
 
 class InvalidStatusMessageError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Invalid status message from the client was rejected"
+        message = "Invalid status message from the client was rejected."
         super().__init__(message, details)
 
 
 # TODO: Add runtime checking for schema validation.
 class InvalidSchemaError(SDKBaseException):
     def __init__(self, details=""):
-        message = "Invalid schema was rejected"
+        message = "Invalid schema was rejected."
         super().__init__(message, details)
