@@ -1,4 +1,4 @@
-# Client Device Discovery (CCD) Client SDK 
+# Client Device Discovery (CDD) Client SDK 
 Discovery, monitoring and connection management of streaming video devices using an internet-secure, cloud 
 and NAT friendly, scalable, pairing and communication protocol.
 
