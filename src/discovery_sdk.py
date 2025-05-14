@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import cattr
 import time
-from threading import Lock
 import json
 from jsonschema import validate
 import paho.mqtt.client as mqtt
-from typing import Union
+from threading import Lock
+from typing import Optional
 from credentialstore import CredentialStore
 from custom_exceptions import (
     ConnectError,
@@ -29,7 +30,7 @@ from custom_exceptions import (
     ReportSchemaError,
     SystemIntegrationError,
     CertificatesRotationError,
-    CertificatesError
+    InvalidThumbnailSubscription
 )
 
 from pairing import Pairing
@@ -46,10 +47,14 @@ from utils import (
     publish_message,
     validate_file_exists,
     validate_path_exists_and_writeable,
-    ssl_alpn,
+    ssl_alpn
 )
 
-from host_config import HostConfig
+from host_config import (
+    HostConfig,
+    get_host_config
+)
+from thumbnails import ThumbnailManager
 
 SUPPORTED_DEVICE_TYPES = [
     "ENCODER",
@@ -86,9 +91,10 @@ class CddSdk(object):
         self.device_type = device_type
 
         # Additional params and classes needed by the SDK.
-        self.certs: Union[CredentialStore, None] = None
-        self.host_config: Union[HostConfig, None] = None
-        self.mqtt_client: Union[mqtt.Client, None] = None
+        self.certs: Optional[CredentialStore] = None
+        self.host_config: Optional[HostConfig] = None
+        self.mqtt_client: Optional[mqtt.Client] = None
+        self.thumbnail_manager: ThumbnailManager = ThumbnailManager()
         self.state = States.DISCONNECTED
         self.host_id: str = ""
         self.api_lock = Lock()
@@ -130,9 +136,9 @@ class CddSdk(object):
         Prepares the SDK for pairing or connecting to specific host_id.
         """
         self.host_id = host_id
-        self.host_config = HostConfig.get_valid_host_config(self.host_id)
+        self.host_config = get_host_config(host_id)
         self.certs = CredentialStore(
-            self.certs_path, self.device_local_id, self.host_config.host_id
+            self.certs_path, self.device_local_id, self.host_id
         )
         self.pairing = Pairing(
             self.certs,
@@ -393,13 +399,9 @@ class CddSdk(object):
                         exception=ClientAPIThrottle(details="Request: report_status"),
                     )
 
-                try:
-                    str_payload = json.dumps(status_payload)
-                except Exception as e:
-                    raise ReportStatusError(details=str(e)) from e
-
                 print("Validating status payload")
                 try:
+                    str_payload = json.dumps(status_payload)
                     validate(schema=self.schema, instance=status_payload)
                 except Exception as e:
                     # This result will eventually feed into SDK Telemetry (WIP). Here the
@@ -524,6 +526,15 @@ class CddSdk(object):
         except Exception as e:
             raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_certs}.")
 
+        try:
+            self.mqtt_client.subscribe(topic=topics.update_thumbnail)
+            self.mqtt_client.message_callback_add(
+                sub=topics.update_thumbnail,
+                callback=self._update_thumbnail_subscription_callback,
+            )
+        except Exception as e:
+            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_thumbnail}.")
+
         self._report_schema()  # Service will ignore all but the first schema reported by this device_id.
         self._schema_delivered = True
 
@@ -636,8 +647,8 @@ class CddSdk(object):
 
     def _update_configuration_callback(self, client, userdata, message):
         """
-        Called asynchronously in response to a new message received on the SUB_UPDATE_TOPIC persistent topic.
-        An update here means the service just updated the configuration payload (or we just connected).
+        Called asynchronously in response to a new message received on the host_settings.sub_update_topic persistent
+        topic. An update here means the service just updated the configuration payload (or we just connected).
         The service expects the client to handle an updated configuration right away when the client is connected.
 
         Args:
@@ -670,13 +681,13 @@ class CddSdk(object):
 
     def _update_certs_callback(self, client, userdata, message):
         """
-        Called asynchronously in response to a new message received on the SUB_UPDATE_CERTS_TOPIC persistent topic.
-        An update here means the service just updated the credentials payload (or we just connected).
-        If different from the current device_cert, the client must immediately replace the device_cert, disconnect and
-        reconnect.
+        Called asynchronously in response to a new message received on the host_settings.sub_update_certs_topic
+        persistent topic. An update here means the service just updated the credentials payload (or the client just
+        connected).  If different from the current device_cert, the client must immediately replace the device_cert,
+        disconnect and reconnect.
 
         Args:
-             client, userdata: unused metadata supplied by the mqtt client
+             client, userdata: unused metadata supplied by the mqtt client.
              message: str device-cert PEM str format.
 
         Side Effect:
@@ -711,6 +722,28 @@ class CddSdk(object):
 
         except Exception as e:
             raise CertificatesRotationError(details="Msg: {e}.")
+
+    def _update_thumbnail_subscription_callback(self, client, userdata, message):
+        """
+        Called asynchronously in response to a new message received on the
+        host_settings.sub_update_thumbnail_subscription_topic persistent topic.
+        An update here means the service just updated the thumbnail subscription payload (or the client just connected).
+        The service expects the client to handle an updated thumbnail right away when the client is connected.
+
+        Args:
+             client, userdata: unused metadata supplied by the mqtt client.
+             message: JSON thumbnail payload from the service.
+
+        Side Effect:
+            Persist thumbnail for subsequent Response to client get_thumbnail() requests.
+            Persists any error validating the Thumbnail, and if found are included in the above Response.
+        """
+        try:
+            print(f"Got a new thumbnail subscription request.")
+            tn_json = json.loads(message.payload.decode("utf-8"))
+            self.thumbnail_manager.update_thumbnail(tn_json)
+        except json.JSONDecodeError as e:
+            raise InvalidThumbnailSubscription(details=f"Thumbnail subscription: Could not parse.  Msg: {e}") from e
 
     def _report_schema(self):
         """

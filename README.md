@@ -53,7 +53,6 @@ embedded systems:
 
 ### Work in progress...
 
-- Add thumbnails API
 - Add deregister API
 - Add standardized logging 
 - Add telemetry
@@ -428,6 +427,48 @@ Expected Host Service Response:
 }
 
 ```
+
+### Test Thumbnails
+```bash
+Application Reference Design (ARD) emits a series of thumbnails to /tmp/image_sdi.jpg and /tmp/image_hdmi.jpg.
+These represent images from both the SDI-1 and HDMI-1 sources. Availability and location are defined in the
+schema and status message (see instance_schema.json and example_status.json). The SDK delivers images to the
+Host Service in response to a "subscription" request. The application need only emit images to the local_path.
+The SDK handles the rest including managing the rate, expiration, and transmission.
+
+This example allows you to make a Get Thumbnail API call to the Host Service Test Endpoint which passes a new
+thumbnail subscription to the device.
+
+Protocol Restrictions:
+- Each service advertises the max supported file size in the host_configration file ("thumbnail_max_size_KB": int)
+- Images older than 10s are deemed stale and will not be transmitted.  This ensures only actively produced images
+  are sent.  Additionally means that devices need not actively delete old images to prevent them from being transmitted.
+
+The following is an example Host Service Test Endpoint API.  You can repeatedly call this API to get a fresh image.
+The first response may be empty as the new subscription is being processed.
+
+Request Path:  <base_endpoint>/dev/device/{device-id}?source=<source_id>
+Request Type: GET
+e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01?source=SDI-1
+e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01?source=HDMI-1
+
+Expected Host Service Response:
+{
+    "message": "Thumbnail request expires in: 120",
+    "image": {
+        "base64_image": A base 64 encoded image of type <image_type>,
+        "timestamp": "2025-05-14 16:28:02 UTC",
+        "image_type": "jpg",
+        "max_size_KB": 250,   <- Max size support by the Host Service
+        "image_size_KB": 139
+    }
+}
+
+To view the image you must base64 decode base64_image and open in an appropriate jpg or png viewing application.  
+
+```
+
+
 
 ### De-Register or Un-claim the device
 ```bash

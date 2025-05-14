@@ -31,11 +31,14 @@ class Topics(object):
         print(f"Host Settings: {host_settings}")
         self.device_id = device_id
         try:
-            # Subscribe: receiving schema-compliant configuration messages.
+            # Subscribe: receiving schema-compliant configuration messages. (persistent topic)
             self.update_configuration = host_settings.sub_update_topic
 
-            # Subscribe: informs the client about the most current certs available.
+            # Subscribe: informs the client about the most current certs available. (persistent topic)
             self.update_certs = host_settings.sub_update_certs_topic
+
+            # Subscribe: informs the client about the current thumbnail subscription (persistent topic)
+            self.update_thumbnail = host_settings.sub_update_thumbnail_subscription_topic
 
             # Publish: sending scoped-schema to the service.
             self.report_schema = host_settings.pub_report_schema_topic
@@ -45,6 +48,7 @@ class Topics(object):
 
             print(f"Topics: Sub: {self.update_configuration}")
             print(f"Topics: Sub: {self.update_certs}")
+            print(f"Topics: Sub: {self.update_thumbnail}")
             print(f"Topics: Pub: {self.report_schema}")
             print(f"Topics: Pub: {self.report_status}")
         except Exception as e:

@@ -110,6 +110,12 @@ class PairingServiceResponseError(SDKBaseException):
         super().__init__(message, details)
 
 
+class HostConfigurationError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "HostConfiguration error."
+        super().__init__(message, details)
+
+
 # Common causes: No network connectivity, DNS resolution failure, Server is down or unreachable,
 # Firewall blocking the connection, Invalid URL or hostname, Server forcibly closed the connection
 # Network timeout during connection establishment.
@@ -212,4 +218,19 @@ class InvalidStatusMessageError(SDKBaseException):
 class InvalidSchemaError(SDKBaseException):
     def __init__(self, details=""):
         message = "Invalid schema was rejected."
+        super().__init__(message, details)
+
+
+#
+# THUMBNAIL related errors
+#
+class InvalidThumbnailSubscription(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Invalid Thumbnail subscription message from the service was rejected."
+        super().__init__(message, details)
+
+
+class ThumbnailProcessingError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Could not process Thumbnail subscription."
         super().__init__(message, details)

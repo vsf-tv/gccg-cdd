@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-
+import cattr
 from topics import Topics
 import os
 from pathlib import Path
@@ -24,12 +24,9 @@ from custom_exceptions import (
     CertificatesReadError,
     SystemIntegrationError,
 )
-from utils import (
-    generate_csr,
-    generate_client_keys
-)
+from utils import generate_csr, generate_client_keys
 
-from host_settings  import HostSettings
+from host_settings import HostSettings
 
 
 class CredentialStore(object):
@@ -130,10 +127,12 @@ class CredentialStore(object):
                 self.device_cert_file,
                 self.priv_key_file,
                 self.uri_file,
-                self.host_settings_file
+                self.host_settings_file,
             ]:
                 if not os.path.exists(file):
-                    raise CertificatesReadError(details=f"Missing: {file}. Should deregister and re-pair the device")
+                    raise CertificatesReadError(
+                        details=f"Missing: {file}. Should deregister and re-pair the device."
+                    )
             try:
                 with open(self.uri_file, "r") as f:
                     self.uri = f.read()
@@ -149,16 +148,16 @@ class CredentialStore(object):
             except Exception as e:
                 # File system error or some kind of permissions problem.
                 raise CertificatesReadError(
-                    details=f"Invalid device_id file: {self.device_id_file}. Deregister and re-pair the device"
+                    details=f"Invalid device_id: {self.device_id_file}. Re-pair device. Msg: {e}."
                 ) from e
 
             try:
                 with open(self.host_settings_file, "r") as f:
-                    self.host_settings = HostSettings.get_valid_host_settings(json.load(f))
+                    self.host_settings = cattr.structure_attrs_fromdict(json.load(f), HostSettings)
             except Exception as e:
                 # File system error or some kind of permissions problem.
                 raise CertificatesReadError(
-                    details=f"Invalid host_settings file: {self.host_settings_file}. Deregister and re-pair the device"
+                    details=f"Invalid host_settings: {self.host_settings_file}. Re-pair device. Msg: {e}."
                 ) from e
 
             # Topics are typically device_id dependent in a host service for message routing
@@ -194,9 +193,13 @@ class CredentialStore(object):
                 # This would mean generate_keys_and_csr() was not called.
                 raise CertificatesInvalid(details="Missing device_id")
             if not ca_cert:
-                raise CertificatesInvalid(details="Missing root ca certificate: ca_cert")
+                raise CertificatesInvalid(
+                    details="Missing root ca certificate: ca_cert."
+                )
             if not device_cert:
-                raise CertificatesInvalid(details="Missing device certificate: device_cert")
+                raise CertificatesInvalid(
+                    details="Missing device certificate: device_cert."
+                )
             if not self.priv_key:
                 raise CertificatesInvalid(details="Missing private key: priv_key")
             if not uri:
@@ -223,11 +226,13 @@ class CredentialStore(object):
                     f.write(uri)
 
                 with open(self.host_settings_file, "w") as f:
-                    json.dump(host_settings.to_dict(), f)
+                    json.dump(cattr.unstructure(host_settings), f)
 
             except Exception as e:
                 # File system Error or some kind of permissions problem that changed after the SDK was started.
-                raise CertificatesWriteError(details=f"Unable to write certificates to the device: {e}.")
+                raise CertificatesWriteError(
+                    details=f"Unable to write certificates to the device: {e}."
+                )
 
             self.uri = uri
             self._topics = Topics(self.device_id, host_settings)
@@ -237,7 +242,7 @@ class CredentialStore(object):
         Updates the device cert file on the filesystem.
         Args:  device_cert PEM str format.
         """
-        assert device_cert,  "Device_cert is required."
+        assert device_cert, "Device_cert is required."
         with open(self.device_cert_file, "w") as f:
             print(f"Updating device cert file: {self.device_cert_file}.")
             f.write(device_cert)

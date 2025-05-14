@@ -111,7 +111,7 @@ class APIServer:
         @self.app.route("/report_status", methods=["POST"])
         def report_status():
             payload = request.get_json()
-            print(f"Got status: {payload}")
+            print(f"Got status payload.")
             return jsonify(
                 self.sdk_manager.get_client()
                 .report_status(status_payload=payload)

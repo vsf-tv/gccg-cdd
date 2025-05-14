@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+from pathlib import Path
+import threading
 import time
+import shutil
 import signal
 import subprocess
 import os
@@ -37,6 +40,13 @@ GET_CONFIGURATION = f"http://127.0.0.1:{PORT}/get_configuration"
 # From project source root.
 current_dir = os.path.dirname(os.path.abspath(__file__))
 STATUS_JSON_FILE = os.path.join(current_dir, "example_status.json")
+
+
+def get_simulated_bitrate():
+    """
+    Returns a fake bitrate int between 20000 and 30000
+    """
+    return int((time.time() * 1000) % 10000) + 20000
 
 
 class Encoder(object):
@@ -73,8 +83,16 @@ class Encoder(object):
             status_payload = json.load(f)
             if not self.running():
                 status_payload["status"]["channels"][0]["state"] = "IDLE"
+                status_payload["status"]["channels"][0]["output_status"]["state"] = "IDLE"
+                status_payload["status"]["channels"][0]["video_status"]["state"] = "IDLE"
+                status_payload["status"]["channels"][0]["video_status"]["bitrate"] = 0
+                status_payload["status"]["channels"][0]["audio_status"]["state"] = "IDLE"
             else:
                 status_payload["status"]["channels"][0]["state"] = "ACTIVE"
+                status_payload["status"]["channels"][0]["output_status"]["state"] = "ACTIVE"
+                status_payload["status"]["channels"][0]["video_status"]["state"] = "ACTIVE"
+                status_payload["status"]["channels"][0]["video_status"]["bitrate"] = get_simulated_bitrate()
+                status_payload["status"]["channels"][0]["audio_status"]["state"] = "ACTIVE"
             return status_payload
 
     def start(self, str_settings: dict):
@@ -182,6 +200,68 @@ class Encoder(object):
             print(f"Unable to process command: {e}")
 
 
+class ThumbnailSimulator(threading.Thread):
+    """
+    Given a source_dir with a bunch of images (all jpg or all png) copy to dest at the interval.
+    The dest_dir must match the thumbnail_status from the instance schema and status message.
+
+    In practice the video encoder would be dumping images from the inputs and/or a decoder from the outputs
+    """
+    def __init__(self, source_dir: str, dest: str, interval: int, name: str):
+        super().__init__()
+        self.valid = True
+        self.source_dir = source_dir
+        self.dest = dest
+        self.dest_dir = os.path.dirname(dest)
+        self.interval = interval
+        self.files = [os.path.join(source_dir, f) for f in os.listdir(source_dir)]
+        self.image_index = 0
+        self.validate()
+        self.temp_file = Path(dest).parent / f"temp_{name}"
+
+    def validate(self):
+        if not self.files:
+            raise ValueError(f"No files found in source directory: {self.source_dir}")
+
+        if not os.path.exists(self.source_dir):
+            raise ValueError(f"Source directory does not exist: {self.source_dir}")
+
+        if not os.path.exists(self.dest_dir):
+            raise ValueError(f"Destination directory does not exist: {self.dest_dir}")
+
+        if not os.access(self.dest_dir, os.W_OK):
+            raise ValueError(f"Destination directory is not writable: {self.dest_dir}")
+
+    def pick_image(self) -> str:
+        # cycle through all images in source_dir infinitely
+        image_path = self.files[self.image_index]
+        self.image_index += 1
+        if self.image_index >= len(self.files):
+            self.image_index = 0
+        return image_path
+
+    def stop(self):
+        self.valid = False
+
+    def run(self):
+        while self.valid:
+            image = self.pick_image()
+            try:
+                # shutil.copy mimics non-atomic (chunked) writes typical for an encoder emitting a Thumbnail.
+                # If transmitted, may result in send a partial file.
+                shutil.copy2(src=image, dst=self.temp_file)
+                # After the imagee is emitted by the 'encoder' (simulated above),
+                # move performs an atomic copy operation so self.dest is always a complete file.
+                shutil.move(self.temp_file, self.dest)
+                # Ensures the file mtime is updated which is essential for stale file detection!
+                Path(self.dest).touch()
+            except Exception as e:
+                # Clean up the temp file if something goes wrong
+                print(f"Error writing TN image to disk: msg {e}")
+                os.unlink(self.temp_file)
+            time.sleep(self.interval)
+
+
 class ClientApplication(object):
     """
     A basic client application that will start/stop using the available webcam.
@@ -193,6 +273,18 @@ class ClientApplication(object):
         self.latest_configuration_id = INITIAL_CONFIG_ID
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
+        self.thumbnail_emitter_sdi = ThumbnailSimulator(
+            source_dir=os.path.join(Path(__file__).parent, "thumbnail_images_sdi"),
+            dest="/tmp/image_sdi.jpg",  # Matches schema and status message
+            interval=2,
+            name="sdi"
+        )
+        self.thumbnail_emitter_hdmi = ThumbnailSimulator(
+            source_dir=os.path.join(Path(__file__).parent, "thumbnail_images_hdmi"),
+            dest="/tmp/image_hdmi.jpg",  # Matches schema and status message
+            interval=2,
+            name="hdmi"
+        )
 
     def signal_handler(self, signum, frame):
         """
@@ -281,6 +373,9 @@ class ClientApplication(object):
             deletes the now expired or revoked certs.
 
         """
+        self.thumbnail_emitter_sdi.start()
+        self.thumbnail_emitter_hdmi.start()
+
         while self.running:
             try:
                 print("........................")
@@ -327,7 +422,13 @@ class ClientApplication(object):
             except Exception as e:
                 print(f"An error occurred: {e}")
 
+            # Simulate producing a thumbnail image.  Copy from the SDK repository to the thumbnail directory
+            # advertised in the instance schema.
             time.sleep(3)
+
+        self.thumbnail_emitter_sdi.stop()
+        self.thumbnail_emitter_hdmi.stop()
+        print("Exiting")
 
 
 def parse_api_response(response) -> dict:

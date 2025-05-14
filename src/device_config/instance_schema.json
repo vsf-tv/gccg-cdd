@@ -24,17 +24,14 @@
                 "description": "Required param: also likely to be accessed programmatically",
                 "$ref": "#/$protected/output_configuration"
               },
-              "input_configuration": {
-                "$ref": "#/$defs/input_configuration"
+              "source": {
+                "$ref": "#/$defs/inputs_ids"
               },
               "video_configuration": {
                 "$ref": "#/$defs/video_configuration"
               },
               "audio_configuration": {
                 "$ref": "#/$defs/audio_configuration"
-              },
-              "thumbnail": {
-                "$ref": "#/$immutable/thumbnail_request"
               }
             },
             "required": [
@@ -45,13 +42,16 @@
             "additionalProperties": false
           }
         }
-      },
-      "required": [
-        "channels"
-      ]
+      }
     },
     "status": {
       "properties": {
+        "thumbnails": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$immutable/thumbnail_status"
+          }
+        },
         "system": {
           "type": "object",
           "properties": {
@@ -164,31 +164,23 @@
         "IDLE"
       ]
     },
-    "thumbnail_request": {
-      "description": "Request a thumbnail until the request expires",
+    "thumbnail_status": {
+      "description": "Thumbnail available if present",
       "type": "object",
       "properties": {
-        "period": {
-          "description": "Seconds between thumbnails",
-          "type": "integer",
-          "minimum": 0
+        "source": {
+          "$ref": "#/$defs/inputs_ids"
         },
-        "expires": {
-          "description": "Epoch time UTC seconds when request expires",
-          "type": "integer",
-          "minimum": 0
-        },
-        "path": {
-          "description": "Public pre-signed url to put the image valid until <expires>",
-          "type": "string"
+        "local_path": {
+          "description": "Protocol supports jpg or png type for thumbnail images.",
+          "type": "string",
+          "pattern": "^(?:/[^/]+)*/?[^/]+\\.(jpg|png)$"
         }
       },
       "required": [
-        "period",
-        "expires",
-        "path"
-      ],
-      "additionalProperties": false
+        "source",
+        "local_path"
+      ]
     },
     "aes128_passcode": {
       "type": "string",
@@ -254,18 +246,6 @@
       "enum": [
         "Channel1",
         "Channel2"
-      ]
-    },
-    "input_configuration": {
-      "description": "Schema applies to inputs",
-      "type": "object",
-      "properties": {
-        "source": {
-          "$ref": "#/$defs/inputs_ids"
-        }
-      },
-      "required": [
-        "source"
       ]
     },
     "video_configuration": {

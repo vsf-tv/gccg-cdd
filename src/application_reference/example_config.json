@@ -4,6 +4,7 @@
       {
         "id": "Channel1",
         "state": "ACTIVE",
+        "source": "SDI-1",
         "output_configuration": {
           "srt": {
             "srt_type": "caller",
