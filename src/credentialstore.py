@@ -227,8 +227,17 @@ class CredentialStore(object):
 
             except Exception as e:
                 # File system Error or some kind of permissions problem that changed after the SDK was started.
-                raise CertificatesWriteError(details=f"Unable to write certificates to the device: {e}")
+                raise CertificatesWriteError(details=f"Unable to write certificates to the device: {e}.")
 
             self.uri = uri
             self._topics = Topics(self.device_id, host_settings)
 
+    def update_device_cert_file(self, device_cert: str):
+        """
+        Updates the device cert file on the filesystem.
+        Args:  device_cert PEM str format.
+        """
+        assert device_cert,  "Device_cert is required."
+        with open(self.device_cert_file, "w") as f:
+            print(f"Updating device cert file: {self.device_cert_file}.")
+            f.write(device_cert)

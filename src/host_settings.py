@@ -24,6 +24,13 @@ class HostSettings(object):
         self.sub_update_certs_topic = host_settings["SUB_UPDATE_CERTS_TOPIC"]
         self.pub_report_subscription_topic = host_settings["PUB_REPORT_SUBSCRIPTION_TOPIC"]
 
+        if self.sub_update_certs_topic == self.sub_update_topic:
+            # Devices that were provisioned before 4/24/2025 will have this bad sub_update_certs_topic topic provided
+            # by the service.  This problem is exposed now that cert-rotation is enabled in the SDK.  As a work-around
+            # rotation is basically disabled for these 'legacy' devices.
+            print("Host Settings: Detected legacy device.  Using legacy topic name to disable cert rotation")
+            self.sub_update_certs_topic = "legacy-device-need-to-pair-again"
+
         print(f"Host Settings: {self.to_dict()}")
 
     def to_dict(self) -> dict:
