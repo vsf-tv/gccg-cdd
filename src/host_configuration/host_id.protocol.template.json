@@ -1,6 +1,7 @@
 {
-  "SERVICE_ID": "str",
-  "SERVICE_NAME": "str",
-  "PAIRING_URL": "str",
-  "AUTH_URL": "str"
+  "service_id": "str",
+  "service_name": "str",
+  "pairing_url": "str",
+  "auth_url": "str",
+  "thumbnail_max_size_KB": "int"
 }

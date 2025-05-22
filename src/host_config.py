@@ -1,36 +1,35 @@
-import json
-import os
-from custom_exceptions import SystemIntegrationError
-from utils import (
-    get_json_from_host_configuration_dir,
-    validate_template
-)
+import attr
+import cattr
+from custom_exceptions import HostConfigurationError
+from utils  import get_json_from_host_configuration_dir
 
 
+@attr.define
 class HostConfig(object):
     """
-    Instantiate HostConfig via the factory class method: get_valid_host_config().
+    Instantiate HostConfig cattr.structure()
 
     Persist the current host configuration information as specified in the user-supplied host_config.
     Validates the required JSON params as specified in the Discovery Protocol.
     """
-    service_id: str = ""
-    service_name: str = ""
-    pairing_url: str = ""
-    auth_url: str = ""
+    service_id: str = attr.field(validator=attr.validators.instance_of(str))
+    service_name: str = attr.field(validator=attr.validators.instance_of(str))
+    pairing_url: str = attr.field(validator=attr.validators.instance_of(str))
+    auth_url: str = attr.field(validator=attr.validators.instance_of(str))
 
-    def __init__(self, host_id):
-        self.host_id = host_id
+
+def get_host_config(host_id) -> HostConfig:
+    """
+    Handles retrieving <host_id>.json, serializing into HostConfig and related exceptions.
+    :param host_id:
+    :return:
+    """
+    try:
         config = get_json_from_host_configuration_dir(f"{host_id}.json")
-        self.service_id = config["SERVICE_ID"]
-        self.service_name = config["SERVICE_NAME"]
-        self.pairing_url = config["PAIRING_URL"]
-        self.auth_url = config["AUTH_URL"]
-
-    @classmethod
-    def get_valid_host_config(cls, host_id: str):
-        host_config_file = f"{host_id}.json"
-        host_config: dict = get_json_from_host_configuration_dir(host_config_file)
-        host_config_template: dict = get_json_from_host_configuration_dir("host_id.protocol.template.json")
-        validate_template(host_config_template, host_config, f"host_config: {host_config_file}")
-        return HostConfig(host_id)
+        return cattr.structure(config, HostConfig)
+    except (TypeError, ValueError, AttributeError) as e:
+        print(f"HostConfiguration: Payload Invalid.")
+        raise HostConfigurationError(details=f"Invalid structure.  Msg: {e}") from e
+    except Exception as e:
+        print(f"HostConfiguration:  Can not parse.")
+        raise HostConfigurationError(details=f"Can not parse.  Msg: {e}") from e

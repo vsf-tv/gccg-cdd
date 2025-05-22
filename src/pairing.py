@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import cattr
 import requests
 import time
-from typing import Union
+from typing import Optional
 from credentialstore import CredentialStore
 from custom_exceptions import (
     PairingError,
@@ -51,7 +52,7 @@ class Pairing(object):
         self.device_id: str = ""
         self.pairing_code: str = ""
         self.access_code: str = ""
-        self.host_settings: Union[HostSettings, None] = None
+        self.host_settings: Optional[HostSettings] = None
 
         # This value will be set by authenticate_pairing_code().
         self.certs_payload = {}
@@ -107,28 +108,9 @@ class Pairing(object):
 
         """
         self.has_pairing_code = False
-        try:
-            with requests.get(
-                self.pairing_url,
-                params={"device_type": self.device_type},  # Sets a query string param.
-                timeout=MAX_TIMEOUT_SEC,
-            ) as response:
-                print(f"Pairing response: {response.text}")
-                rjson = json.loads(response.text)
 
-        except requests.HTTPError as e:
-            if 200 != response.status_code:
-                raise PairingError(
-                    details=f"StatusCode: {response.status_code} - Msg: {e}"
-                )
-        except requests.ConnectionError as e:
-            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
-        except requests.Timeout as e:
-            raise PairingServiceRequestTimeoutError(details=f"Msg: {e}")
-        except json.JSONDecodeError as e:
-            raise PairingServiceResponseError(details=str(e.msg))
-        except Exception as e:
-            raise PairingError(details=f"Msg: {e}")
+        # Call the Pair Host Service API.
+        rjson = self.pair()
 
         # Validate the payload.
         device_id = rjson.get("device_id", "")
@@ -149,12 +131,42 @@ class Pairing(object):
             raise PairingServiceResponseError(details="Missing host_settings")
 
         # OK response.
-        print(f"Got pairing code: {pairing_code}   device_id: {device_id}")
-        self.device_id = device_id
-        self.pairing_code = pairing_code
-        self.access_code = access_code
-        self.host_settings = HostSettings.get_valid_host_settings(host_settings_json)
-        self.has_pairing_code = True
+        print(f"Pairing Response: pairing code: {pairing_code}   device_id: {device_id} "
+              f"host_settings: {host_settings_json}")
+        try:
+            self.device_id = device_id
+            self.pairing_code = pairing_code
+            self.access_code = access_code
+            self.host_settings = cattr.structure(host_settings_json, HostSettings)
+            self.has_pairing_code = True
+        except (TypeError, ValueError, AttributeError) as e:
+            raise PairingServiceResponseError(details=f"Pairing: Invalid HostSettings payload. Msg: {e}") from e
+        except Exception as e:
+            raise PairingError(details=f"Pairing: Unknown error. Msg: {e}")
+
+    def pair(self):
+        try:
+            with requests.get(
+                    self.pairing_url,
+                    params={"device_type": self.device_type},  # Sets a query string param.
+                    timeout=MAX_TIMEOUT_SEC,
+            ) as response:
+                print(f"Pairing response: {response.text}")
+                return json.loads(response.text)
+
+        except requests.HTTPError as e:
+            if 200 != response.status_code:
+                raise PairingError(
+                    details=f"StatusCode: {response.status_code} - Msg: {e}"
+                )
+        except requests.ConnectionError as e:
+            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
+        except requests.Timeout as e:
+            raise PairingServiceRequestTimeoutError(details=f"Msg: {e}")
+        except json.JSONDecodeError as e:
+            raise PairingServiceResponseError(details=str(e.msg))
+        except Exception as e:
+            raise PairingError(details=f"Msg: {e}")
 
     def authenticate_pairing_code(self) -> bool:
         """
@@ -174,35 +186,8 @@ class Pairing(object):
         if not self.has_pairing_code:
             raise PairingError(details="No pairing code to authenticate")
 
-        try:
-            self.certs.generate_keys_and_csr(device_id=self.device_id)
-
-            with requests.post(
-                self.auth_url,
-                json={
-                    "device_id": self.device_id,
-                    "pairing_code": self.pairing_code,
-                    "access_code": self.access_code,
-                    "public_key": self.certs.pub_key,
-                    "csr": self.certs.csr,
-                },
-                timeout=MAX_TIMEOUT_SEC,
-            ) as response:
-                rjson = json.loads(response.text)
-
-        except requests.HTTPError as e:
-            if 200 != response.status_code:
-                raise PairingError(
-                    details=f"StatusCode: {response.status_code} - Msg: {e}"
-                )
-        except requests.ConnectionError as e:
-            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
-        except requests.Timeout as e:
-            raise PairingServiceRequestTimeoutError(details=f"Msg: {e}")
-        except json.JSONDecodeError as e:
-            raise PairingServiceResponseError(details=str(e.msg))
-        except Exception as e:
-            raise PairingError(details=f"Msg: {e}")
+        # Call the Host Service Auth API.
+        rjson: dict = self.auth()
 
         status = rjson.get("status", "")
 
@@ -227,3 +212,34 @@ class Pairing(object):
                 raise PairingError(details=f"Unable to write certs to disk: {e}")
         else:
             raise PairingServiceResponseError(details=f"Response: {rjson}")
+
+    def auth(self):
+        try:
+            self.certs.generate_keys_and_csr(device_id=self.device_id)
+
+            with requests.post(
+                    self.auth_url,
+                    json={
+                        "device_id": self.device_id,
+                        "pairing_code": self.pairing_code,
+                        "access_code": self.access_code,
+                        "public_key": self.certs.pub_key,
+                        "csr": self.certs.csr,
+                    },
+                    timeout=MAX_TIMEOUT_SEC,
+            ) as response:
+                return json.loads(response.text)
+
+        except requests.HTTPError as e:
+            if 200 != response.status_code:
+                raise PairingError(
+                    details=f"StatusCode: {response.status_code} - Msg: {e}"
+                )
+        except requests.ConnectionError as e:
+            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
+        except requests.Timeout as e:
+            raise PairingServiceRequestTimeoutError(details=f"Msg: {e}")
+        except json.JSONDecodeError as e:
+            raise PairingServiceResponseError(details=str(e.msg))
+        except Exception as e:
+            raise PairingError(details=f"Msg: {e}")

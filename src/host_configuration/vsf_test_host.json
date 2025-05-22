@@ -1,6 +1,7 @@
 {
-    "SERVICE_ID": "vsf",
-    "SERVICE_NAME": "Test Host for CDD open-source repository",
-    "PAIRING_URL": "https://20yqre42a8.execute-api.us-east-1.amazonaws.com/dev",
-    "AUTH_URL": "https://l5q75xh4q4.execute-api.us-east-1.amazonaws.com/dev"
+    "service_id": "vsf",
+    "service_name": "Test Host for CDD open-source repository",
+    "pairing_url": "https://20yqre42a8.execute-api.us-east-1.amazonaws.com/dev",
+    "auth_url": "https://l5q75xh4q4.execute-api.us-east-1.amazonaws.com/dev",
+    "thumbnail_max_size_KB": 100
 }
