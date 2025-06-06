@@ -72,14 +72,16 @@ class ThumbnailThreadedUploader(threading.Thread):
         super().__init__()
         self.source = source
         self.thumbnail_request = thumbnail_request
-        self.valid = True
+        self._stop_event = threading.Event()
 
     def stop(self):
         """
         Call this method to stop the thread.  Will also stop when the current thumbnail expires.
         """
         print(f"Thumbnail Stop called")
-        self.valid = False
+        self._stop_event.set()
+        if self.is_alive():
+            self.join()  # ensure garbage collection is performed
 
     def run(self):
         """
@@ -92,18 +94,19 @@ class ThumbnailThreadedUploader(threading.Thread):
         """
         try:
             now = int(time.time())
-            next_opportunity: int = now
-            while self.valid and self.thumbnail_request.expires > now:
-                if now >= next_opportunity:
-                    next_opportunity = now + self.thumbnail_request.period
-                    if validate_request_params(self.thumbnail_request):
-                        print(f"Thumbnails:  Sending source: {self.source}." 
-                              f"Expires in: {self.thumbnail_request.expires - now}s.")
-                        upload_file(self.thumbnail_request.local_path,
-                                    self.thumbnail_request.remote_path,
-                                    self.thumbnail_request.period
-                                    )
-                time.sleep(WAIT_TIME_CHECK_NEXT_IMAGE)  # A small pause.
+            while not self._stop_event.is_set() and self.thumbnail_request.expires > now:
+                if validate_request_params(self.thumbnail_request):
+                    print(f"Thumbnails:  Sending source: {self.source}."
+                          f"Expires in: {self.thumbnail_request.expires - now}s.")
+                    upload_file(self.thumbnail_request.local_path,
+                                self.thumbnail_request.remote_path,
+                                self.thumbnail_request.period
+                                )
+                # Wait request.period but exit within 0.1s if stop called
+                for _ in range(self.thumbnail_request.period * 10):
+                    if self._stop_event.is_set():
+                        return
+                    time.sleep(0.1)
                 now = int(time.time())
 
             if self.thumbnail_request.expires < now:

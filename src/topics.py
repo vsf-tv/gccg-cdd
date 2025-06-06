@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from custom_exceptions import SystemIntegrationError
-from host_settings import HostSettings
+from service_api_models import HostSettings
 
 
 class Topics(object):
@@ -45,6 +45,12 @@ class Topics(object):
 
             # Publish: sending status to the service.
             self.report_status = host_settings.pub_report_status_topic
+
+            # Publish:  application requests deprovision, inform the service
+            self.deprovision_inform_service = host_settings.pub_deprovision_topic
+
+            # Subscribe: service requests deprovision, inform the client (persistent topic)
+            self.deprovision_inform_client = host_settings.sub_deprovision_topic
 
             print(f"Topics: Sub: {self.update_configuration}")
             print(f"Topics: Sub: {self.update_certs}")

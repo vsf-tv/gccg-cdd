@@ -13,9 +13,12 @@
 # limitations under the License.
 import os
 import json
+import requests
 import time
 import ssl
 import paho.mqtt.client as mqtt
+import threading
+from models import OnlineStates
 from custom_exceptions import MQTTPublishError
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -150,19 +153,18 @@ def generate_client_keys() -> (str, str):
 
 
 # Generate CSR using the key pair.
-def generate_csr(private_key_pem: str, device_id: str) -> str:
+def generate_csr(private_key_pem: str) -> str:
     """
     Generate a Certificate Signing Request (CSR).
 
     Args:
         private_key_pem: private key in PEM format
-        device_id: service-generated id
 
     Returns:
         csr: Certificate Signing Request str in PEM format
 
     """
-    print(f"Generating CSR for: {device_id}")
+    print(f"Generating CSR")
     private_key_b = serialization.load_pem_private_key(
         private_key_pem.encode('utf-8'),
         password=None,
@@ -173,7 +175,6 @@ def generate_csr(private_key_pem: str, device_id: str) -> str:
         .subject_name(
             x509.Name(
                 [
-                    x509.NameAttribute(NameOID.COMMON_NAME, device_id),
                     x509.NameAttribute(NameOID.ORGANIZATION_NAME, "VSF-CDD"),
                     x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
                 ]
@@ -220,3 +221,72 @@ def validate_template(template: dict, config: dict, err_str: str):
         if required_type == "int":
             if not isinstance(value, int):
                 raise SystemIntegrationError(details=f"Invalid {err_str} Key: {key} Expected Type: {required_type}")
+
+
+class NetworkUtils(object):
+    def __init__(self, online_urls: list[str]):
+        # Https more precisely represents online with Port 443 https access
+        self.www_sites = online_urls
+        self.online = False
+        return
+
+    def is_device_online(self):
+        for site in self.www_sites:
+            if self._check_online(site):
+                self.online = True
+                return True
+            print(f"Online check. Unable to reach: {site}")
+        self.online = False
+        print("Determined device is offline")
+        return False
+
+
+    # Online check looks for TCP connection
+    @staticmethod
+    def _check_online(site):
+        try:
+            _ = requests.get(site, timeout=2)
+            return True
+        except Exception as e:
+            print(f"Could not connect to: {site} mes: {e}")
+        return False
+
+
+class OnlineChecker(threading.Thread):
+    """
+    Periodically checks if the device is online by polling public GET https request to sites provided by host_config.
+
+    User should instantiate this class and call <instance>.start()
+    Obtain online most recent online state: OnlineStates with <instance>.online
+    See: models: OnlineStates
+    """
+
+    network_utils: NetworkUtils = None
+
+    def __init__(self, online_urls: list[str]):
+        super().__init__()
+        self.network_utils = NetworkUtils(online_urls)
+        self._stop_event = threading.Event()
+        self.online: OnlineStates = OnlineStates.UNKNOWN
+
+    def get_online_state(self):
+        return self.online
+
+    def run(self):
+        while not self._stop_event.is_set():
+            # There is some delay in this call...might take a few seconds for this class to return a valid online state
+            try:
+                self.online = OnlineStates.ONLINE if self.network_utils.is_device_online() else OnlineStates.OFFLINE
+            except Exception as e:
+                print(f"Error checking online state: {e}")
+                self.online = OnlineStates.UNKNOWN
+
+            for _ in range(100):  # 10 seconds total interval
+                if self._stop_event.is_set():
+                    return
+                time.sleep(0.1)
+
+    def stop(self):
+        self._stop_event.set()
+        if self.is_alive():
+            self.join()  # ensure garbage collection is performed

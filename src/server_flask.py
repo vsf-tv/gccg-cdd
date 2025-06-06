@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify
 import fcntl
 from typing import Optional
 from discovery_sdk import CddSdk
 import argparse
 import signal
 import sys
+
 
 class CddSdkManager:
     """
@@ -121,6 +122,14 @@ class APIServer:
         @self.app.route("/get_configuration", methods=["GET"])
         def get_configuration():
             return jsonify(self.sdk_manager.get_client().get_configuration().to_dict())
+
+
+        @self.app.route("/deprovision", methods=["POST"])
+        def deprovision():
+            payload = request.get_json()
+            force = payload.get("force", False)
+            print(f"Force:", force)
+            return jsonify(self.sdk_manager.get_client().deprovision(force=force).to_dict())
 
     def run(self, host: str, port: int):
         self.app.run(host=host, port=port)

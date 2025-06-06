@@ -30,7 +30,9 @@ from custom_exceptions import (
     ReportSchemaError,
     SystemIntegrationError,
     CertificatesRotationError,
-    InvalidThumbnailSubscription
+    InvalidThumbnailSubscription,
+    DeprovisionError,
+    SSLSetupError
 )
 
 from pairing import Pairing
@@ -41,12 +43,15 @@ from models import (
     DisconnectResponse,
     ReportStatusResponse,
     GetConfigurationResponse,
+    DeprovisionResponse
 )
+from service_api_models import DeprovisionMessage
 from utils import (
     PublishThrottle,
     publish_message,
     validate_file_exists,
     validate_path_exists_and_writeable,
+    OnlineChecker,
     ssl_alpn
 )
 
@@ -81,10 +86,7 @@ class CddSdk(object):
     def __init__(
         self, certs_path: str, device_local_id: str, schema_file: str, device_type: str
     ):
-        if device_type not in SUPPORTED_DEVICE_TYPES:
-            raise SystemIntegrationError(
-                details=f"Device type: {device_type} is not supported. Must be one of: {SUPPORTED_DEVICE_TYPES}"
-            )
+
         self.certs_path: str = certs_path
         self.device_local_id: str = device_local_id
         self.schema_file: str = schema_file
@@ -94,6 +96,7 @@ class CddSdk(object):
         self.certs: Optional[CredentialStore] = None
         self.host_config: Optional[HostConfig] = None
         self.mqtt_client: Optional[mqtt.Client] = None
+        self.online_checker: Optional[OnlineChecker] = OnlineChecker([])
         self.thumbnail_manager: ThumbnailManager = ThumbnailManager()
         self.state = States.DISCONNECTED
         self.host_id: str = ""
@@ -121,11 +124,13 @@ class CddSdk(object):
         Disconnects from the current host if CONNECTED and places in the DISCONNECTED state.
         Resets all settings related to the host and prepares the SDK to make a new connection.
         """
-        self.host_id = None
+        self.host_id = None  # Unsetting host_id indicates host is no longer/not initialized.
         self.certs = None
         self.configuration = Configuration()
         self._schema_delivered = False
         self._transition(States.DISCONNECTED)
+        if self.online_checker:
+            self.online_checker.stop()
         if self.mqtt_client:
             self.mqtt_client.disconnect()
             self.mqtt_client.loop_stop()
@@ -135,17 +140,20 @@ class CddSdk(object):
         """
         Prepares the SDK for pairing or connecting to specific host_id.
         """
-        self.host_id = host_id
-        self.host_config = get_host_config(host_id)
+        self.host_config = get_host_config(host_id, self.device_type)
+        self.online_checker = OnlineChecker(self.host_config.online_check_urls)
+        self.online_checker.start()
         self.certs = CredentialStore(
-            self.certs_path, self.device_local_id, self.host_id
+            self.certs_path, self.device_local_id, host_id
         )
         self.pairing = Pairing(
             self.certs,
             self.device_type,
+            self.host_config.service_id,
             self.host_config.pairing_url,
             self.host_config.auth_url,
         )
+        self.host_id = host_id  # Host Initialized
 
     #
     #  PUBLIC METHODS
@@ -185,6 +193,7 @@ class CddSdk(object):
                         success=True,
                         state=self.state,
                         message="Connecting to the service",
+                        online_state=self.online_checker.get_online_state()
                     )
 
                 if self._is(States.CONNECTED):
@@ -194,6 +203,8 @@ class CddSdk(object):
                         state=self.state,
                         message="Connected",
                         device_id=self.certs.device_id,
+                        region=self.certs.region,
+                        online_state=self.online_checker.get_online_state()
                     )
 
                 if self._is(States.RECONNECTING):
@@ -203,6 +214,8 @@ class CddSdk(object):
                         state=self.state,
                         message="Reconnecting...",
                         device_id=self.certs.device_id,
+                        region=self.certs.region,
+                        online_state=self.online_checker.get_online_state()
                     )
 
                 if self._is(States.PAIRING):
@@ -217,8 +230,9 @@ class CddSdk(object):
                         self._reset()
                         return ConnectResponse(
                             success=False,
-                            state=States.DISCONNECTED,
+                            state=self.state,
                             message="Pairing code expired. Reconnect to get a new one.",
+                            online_state=self.online_checker.get_online_state()
                         )
 
                     # OK Poll again for credentials. Will either save.
@@ -235,17 +249,19 @@ class CddSdk(object):
 
                         # Should never happen. Auth was successful: _load_certs() should pass or raise an exception
                         # Ultimately for this to happen, certs would have to be immediately deleted on obtaining them.
+                        self._reset()
                         raise PairingError(
-                            "Device was authenticated, but couldn't load certs. Try pairing again"
+                            "Device was authenticated, but couldn't load certs. Try pairing again."
                         )
 
                     # Still PAIRING, waiting to be claimed.
                     return ConnectResponse(
                         success=True,
-                        state=States.PAIRING,
+                        state=self.state,
                         message="Waiting for device to be claimed",
-                        pairing_code=self.pairing.pairing_code,
+                        pairing_code=self.pairing.get_pairing_code(),
                         expires=self.pairing.expires_in(),
+                        online_state=self.online_checker.get_online_state()
                     )
 
                 if self._is(States.DISCONNECTED):
@@ -260,17 +276,18 @@ class CddSdk(object):
 
                     # Poll for credentials, write them if found
                     # then next time _load_certs() == TRUE.
+                    self.pairing.get_new_pairing_code()
                     self._transition(States.PAIRING)
                     print(self.state)
-
                     # will either get a code or throw exception.
-                    self.pairing.get_new_pairing_code()
+
                     return ConnectResponse(
                         success=True,
                         state=States.PAIRING,
                         message="Connecting pending. Waiting for device to be claimed",
-                        pairing_code=self.pairing.pairing_code,
+                        pairing_code=self.pairing.get_pairing_code(),
                         expires=self.pairing.expires_in(),
+                        online_state=self.online_checker.get_online_state()
                     )
 
             except Exception as e:
@@ -279,13 +296,23 @@ class CddSdk(object):
                     state=self.state,
                     message=f"Error in connect() {e}",
                     exception=e,
+                    online_state=self.online_checker.get_online_state()
                 )
 
-    # TODO: Might remove this since connect() returns the same response in addition to
-    #       driving the connection process if not yet connected.
     def get_connection_status(self) -> ConnectResponse:
-        # Get client status: CONNECTED, Etc.
-        return ConnectResponse(success=True, state=self.state, message="")
+        if self.state in [States.CONNECTED, States.RECONNECTING] and self.certs:
+            return ConnectResponse(success=True,
+                                   state=self.state,
+                                   message="",
+                                   region=self.certs.region,
+                                   online_state=self.online_checker.get_online_state()
+                                   )
+
+        return ConnectResponse(success=True,
+                               state=self.state,
+                               message="",
+                               online_state=self.online_checker.get_online_state()
+                               )
 
     def disconnect(self) -> DisconnectResponse:
         """
@@ -317,6 +344,69 @@ class CddSdk(object):
                     success=False,
                     state=self.state,
                     message=f"Error in disconnect: {e}",
+                    exception=e,
+                )
+
+    def deprovision(self, force: bool = False) -> DeprovisionResponse:
+        """
+        Deprovision the device from the host service. Certs/Identify deleted.
+        Returns a DisconnectResponse().
+
+        If not CONNECTED, requires force=True.
+        SDK will inform the service the user deprovisioned the client if state == CONNECTED.
+
+        Raises:
+            None
+        """
+        # APIs requests should not be called asynchronously.
+        with self.api_lock:
+            try:
+                if self.state not in [States.CONNECTED, States.CONNECTING] and not force:
+                    return DeprovisionResponse(
+                        success=False,
+                        state=self.state,
+                        message="Can only deprovision when CONNECTED or using optional force argument.",
+                    )
+
+                if self.state == States.CONNECTED:
+                    try:
+                        deprovision_message = DeprovisionMessage(
+                            reason="Deprovision requested by user",
+                            time=int(time.time())
+                        )
+                        str_payload = json.dumps(cattr.unstructure(deprovision_message))
+                    except Exception as e:
+                        raise ReportSchemaError(details=str(e)) from e
+
+                    # This should never happen since we are in the CONNECTED state.
+                    topics = self.certs.get_topics()
+                    if not topics or not self.mqtt_client:
+                        raise ConnectError(details="Unable to report schema while not connected")
+
+                    publish_message(
+                        client=self.mqtt_client,
+                        topic=topics.deprovision_inform_service,
+                        payload=str_payload,
+                        qos=1,
+                        retain=False,
+                    )
+                    time.sleep(1)  # Let the message be sent, plenty of time.
+                else:
+                    print("Deprovisioning while DISCONNECTED:  Service not informed the device is now unavailable.")
+
+                self.certs.deprovision()
+                self._reset()
+                return DeprovisionResponse(
+                    success=True,
+                    state=States.DISCONNECTED,
+                    message="Deprovisioned"
+                )
+
+            except Exception as e:
+                return DeprovisionResponse(
+                    success=False,
+                    state=self.state,
+                    message=f"Error in Deprovision: {e}",
                     exception=e,
                 )
 
@@ -484,10 +574,7 @@ class CddSdk(object):
                            mqtt client _on_connect and _on_disconnect callbacks try to keep up.
                            Either way, that condition is handled.
         """
-
-        # TODO: Handle revoked certs signalling the deregister and re-pairing should happen.
-        #        Must inform the connect() client API about this event so the Response
-        #        can include this in the Error().
+        print(f"OnConnect Callback")
         if reason_code in [mqtt.MQTT_ERR_NO_CONN, mqtt.MQTT_ERR_NO_CONN]:
             raise ConnectError(
                 details=f"Credentials were refused or revoked. Deregister and re-pair"
@@ -535,8 +622,18 @@ class CddSdk(object):
         except Exception as e:
             raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_thumbnail}.")
 
+        try:
+            self.mqtt_client.subscribe(topic=topics.deprovision_inform_client)
+            self.mqtt_client.message_callback_add(
+                sub=topics.deprovision_inform_client,
+                callback=self._deprovision_device_callback,
+            )
+        except Exception as e:
+            raise ConnectError(details=f"Client is unable to subscribe to: {topics.deprovision_inform_client}.")
+
         self._report_schema()  # Service will ignore all but the first schema reported by this device_id.
         self._schema_delivered = True
+
 
     def _on_disconnect(self, client, userdata, flags):
         """
@@ -572,13 +669,19 @@ class CddSdk(object):
                 state=self.state,
                 message="Already connected or automatically re-connecting",
                 device_id=self.certs.device_id,
+                region=self.certs.region,
+                online_state=self.online_checker.get_online_state()
             )
 
         if self.mqtt_client and self.state == States.CONNECTING:
-            return ConnectResponse(success=True, state=self.state, message="Connecting")
+            return ConnectResponse(success=True,
+                                   state=self.state,
+                                   message="Connecting",
+                                   online_state=self.online_checker.get_online_state()
+                                   )
 
         try:
-            # State will remain CONNECTING until on_connect() callback.
+            # State will remain CONNECTING until on_connect() callback-> CONNECTED or an exception here -> DISCONNECTED
             self._transition(States.CONNECTING)
             self.mqtt_client = mqtt.Client(
                 client_id=self.certs.device_id,
@@ -607,12 +710,14 @@ class CddSdk(object):
                 success=True,
                 state=self.state,
                 message="Connection started",
+                region=self.certs.region,
+                online_state=self.online_checker.get_online_state(),
                 device_id=self.certs.device_id,
             )
 
         except Exception as e:
             print(f"Error in _start_connect: {e}")
-            self._reset()
+            self._reset()  # transitions to DISCONNECTED
 
             # This is likely the most common error/exception encountered by the host application
             # as it is entirely possible for the users to initiate connections while the device
@@ -621,25 +726,38 @@ class CddSdk(object):
                 success=False,
                 state=self.state,
                 message=f"Unable to connect at this time. Check network connection.",
+                online_state=self.online_checker.get_online_state(),
                 exception=ConnectError(
                     "Unable to make initial connection. Check network connection"
                 ),
             )
 
     def _connect(self):
-        ssl_context = ssl_alpn(
-            ca_cert=self.certs.ca_cert_file,
-            device_cert=self.certs.device_cert_file,
-            private_key=self.certs.priv_key_file,
-            iot_protocol_name=self.certs.host_settings.iot_protocol_name,
-        )
+
+        try:
+            ssl_context = ssl_alpn(
+                ca_cert=self.certs.ca_cert_file,
+                device_cert=self.certs.device_cert_file,
+                private_key=self.certs.priv_key_file,
+                iot_protocol_name=self.certs.host_settings.iot_protocol_name,
+            )
+            # print(f"Open ssl version:{format(ssl.OPENSSL_VERSION)}")
+            # ssl_context = ssl.create_default_context()
+            # ssl_context.set_alpn_protocols([self.certs.host_settings.iot_protocol_name])
+            # ssl_context.load_verify_locations(cafile=self.certs.ca_cert_file)
+            # ssl_context.load_cert_chain(certfile=self.certs.device_cert_file, keyfile=self.certs.priv_key_file)
+        except Exception as e:
+            print(f"Failed to setup SSL. Msg:{e}")
+            raise SSLSetupError(f"Msg:{e}")
+
         self.mqtt_client.tls_set_context(context=ssl_context)
         print(f"Connecting to: {self.certs.uri}")
+
         # Port 443 enables MQTT over HTTPs and transparency in most network environments.
         self.mqtt_client.connect(
-            host=self.certs.uri,
-            port=443,
-            keepalive=self.certs.host_settings.mqtt_keepalive_seconds,
+                host=self.certs.uri,
+                port=443,
+                keepalive=self.certs.host_settings.mqtt_keepalive_seconds,
         )
 
     def _load_certs(self):
@@ -745,6 +863,7 @@ class CddSdk(object):
         except json.JSONDecodeError as e:
             raise InvalidThumbnailSubscription(details=f"Thumbnail subscription: Could not parse.  Msg: {e}") from e
 
+
     def _report_schema(self):
         """
         Report the schema to the host service. Service might only accept this once per session.
@@ -798,3 +917,19 @@ class CddSdk(object):
     def _transition(self, state):
         print(f"Setting state to {state}")
         self.state = state
+
+    def _deprovision_device_callback(self, client, userdata, message):
+        """
+        Callback on service deporvisioning the client.  SDK Will reset the connection.  Subsequent calls to connect()
+        will not be successful as the service has invalidated the certs.
+        """
+        try:
+            message_json: dict = json.loads(message.payload.decode("utf-8"))
+        except json.JSONDecodeError as e:
+            raise DeprovisionError(details=f"Could not parse deprovision payload: {message}.  Msg: {e}") from e
+        try:
+            deprovision_message: DeprovisionMessage = cattr.structure(message_json, DeprovisionMessage)
+            print(f"Service deprovisinoed client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
+            self._reset()
+        except Exception as e:
+            raise DeprovisionError(details=f"Could not parse deprovision model: {message_json}.  Msg: {e}") from e
