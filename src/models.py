@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import attr
 from dataclasses import dataclass
 from enum import Enum
 import random
@@ -31,6 +31,15 @@ class States(Enum):
     CONNECTING = "CONNECTING"
     CONNECTED = "CONNECTED"
     RECONNECTING = "RECONNECTING"
+
+
+class OnlineStates(Enum):
+    """
+    Online State machine
+    """
+    OFFLINE = "OFFLINE"
+    ONLINE = "ONLINE"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclass
@@ -160,9 +169,11 @@ class ConnectResponse(Response):
         self,
         success,
         state: States,
-        message: str,
+        message: str = "",
+        online_state: Optional[OnlineStates] = None,
         exception: Optional[Exception] = None,
         device_id: str = "",
+        region: str = "",
         pairing_code: str = "",
         expires: int = 0,
     ):
@@ -170,6 +181,8 @@ class ConnectResponse(Response):
         self.device_id = device_id
         self.pairing_code = pairing_code
         self.expires = expires
+        self.online_state = online_state
+        self.region = region
 
     def to_dict(self) -> dict:
         """
@@ -188,6 +201,8 @@ class ConnectResponse(Response):
                 "device_id": self.device_id,
                 "pairing_code": self.pairing_code,
                 "expires": self.expires,
+                "online_state": self.online_state.value if self.online_state else None,
+                "region": self.region,
             }
         )
         return base_dict
@@ -196,6 +211,8 @@ class ConnectResponse(Response):
 class DisconnectResponse(Response):
     pass
 
+class DeprovisionResponse(Response):
+    pass
 
 class ReportStatusResponse(Response):
     pass

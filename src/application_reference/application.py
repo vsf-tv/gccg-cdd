@@ -36,6 +36,7 @@ CONNECT = f"http://127.0.0.1:{PORT}/connect"
 DISCONNECT = f"http://127.0.0.1:{PORT}/disconnect"
 REPORT_STATUS = f"http://127.0.0.1:{PORT}/report_status"
 GET_CONFIGURATION = f"http://127.0.0.1:{PORT}/get_configuration"
+DEPROVISION = f"http://127.0.0.1:{PORT}/deprovision"
 
 # From project source root.
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -331,7 +332,8 @@ class ClientApplication(object):
             configuration_payload: dict = configuration.get("payload", {})
 
             # ID is an arbitrary string. Check for a difference.
-            # If there is no change (ie already processed based on the ID) then do nothing.
+            # If there is no change (ie already processed based on the ID) then do nothing
+            # because we've already processed this configuration.
             if update_id != self.latest_configuration_id:
                 print(f"New update. update_id: {update_id}")
                 self.latest_configuration_id = update_id
@@ -341,7 +343,8 @@ class ClientApplication(object):
         """
         Guidance for client applications: (see: documentation: SDK API, SDK Reference Design).
 
-        connect() API Response will include the SDK 'state'.
+        connect() API
+            Response(state)
             PAIRING: Display state and Display pairing_code to the user.
             CONNECTING: Display state to the user. The SDK is attempting to connect,
                         if the network is open, usually takes < 1s.
@@ -350,42 +353,76 @@ class ClientApplication(object):
                         valid approach and can simplify client application logic.
             DISCONNECTED: Display state to the user. See: Handling Revoked or Expired Certs below.
 
-        Run Loop: Client Application options include:
-            1) loop over connect(), get_configuration(), report_status() (every ~3 seconds is OK).
+            Response(online_state)
+            ONLINE: Response to Port 443/https GET request on one of the URls provided in the host_config was
+                    successful. Indicates network environment is suitable for pairing and MQTT connections.
+            OFFLINE: Connection to pairing and MQTT endpoints is not possible at this time.
 
-            2) loop over connect() until CONNECTED(), then loop over get_configuration(), report_status(),
-               if Response(state) == DISCONNECTED, go back to looping over connect().
+            Response(success)
+            Bool:  True | False
+            Indicates the request was fully processed, no exceptions raised.
 
-            For either 1 or 2, optionally report_status() only when something interesting has
-                changed on the device. Consider that minor differences like a small bitrate change
-                is probably not worth reporting.
+            Response(message)
+            <str>
+            An informative message about the success/failure of the request.
 
-        Handling Revoked or Expired Certs:
-            This is indicated by Response(state) == DISCONNECTED, and
-            connect() API Response[error][type] == CertificatesError or CertificatesInvalid
-            (see: documentation: SDK API: Exceptions).
+            Response(pairing_code)
+            <str>
+            Present if: Response(state) == PAIRING
 
-            Client Application options include:
-            1) Leave DISCONNECTED, inform the user the device was revoked, user can invoke deregister (recommended).
-            2) Application to automatically call deregister(). User-involvement still required to re-pair the device.
+            Response(expires)
+            <int> seconds
+            Present if: Response(state) == PAIRING
+            Indicates the time until the pairing_code will expire, after which a subsequent call to connect()
+            will automatically restart the pairing process and result in Response(state) == PAIRING and
+            an updated Response(expires)
 
-            Note: Both 'Run Loop' options above will automatically restart the pairing process once deregister()
-            deletes the now expired or revoked certs.
 
+
+        Application Guidance: Run Loop
+            loop over connect() until Response(state)=CONNECTED(),
+            then loop over get_configuration(), report_status(),
+
+            Note: Each report_status() request invokes a validation and MQTT publish which requires processing by the
+            SDK and host service.  Host_Settings(min_interval_pub_seconds)   (See Host Service API)  indicates the max
+            publish rate beyond which messages will be throttled by the SDK automatically and/or host_service if the
+            SDK throttling is somehow disabled.  Applications should be mindful of excessive publish that can
+            incur throttling and/or possibly disconnects as a result of violating min_interval_pub_seconds limit.
+
+            Note: report_status() should only when something interesting has changed on the device.
+            Consider that minor differences like a small bitrate change is probably not worth reporting.
+
+        Application Guidance: Handling Revoked or Expired Certs:
+
+            This is indicated by *persistent* Response(state) == CONNECTING or RECONNETING and
+            Response(online_state) == ONLINE.  This means the client is able to reach the public internet
+            (ONLINE) but can not establish a connection to the service.  The Host API does not provide a definitive
+            means by which a client can disambiguate an outage on the MQTT broker and expired/deprovisioned credentials.
+            MQTT broker endpoints fortunately are generally very resilient with ample redundancy and failover.
+
+            What an application should do:
+            1) Inform the user the client the device is online but a connection is not established
+            2) Inform the user to invoke deprovision and re-pair the device.
+
+            An application SHOULD NOT automatically deprovision and repair as user-involvement is required to
+            re-pair the device.
         """
         self.thumbnail_emitter_sdi.start()
         self.thumbnail_emitter_hdmi.start()
-
+        failed_connect_attempts_while_online: int = 0
         while self.running:
             try:
                 print("........................")
                 response = requests.get(CONNECT, params={"host_id": host_id}, timeout=5)
                 if response.status_code == 200:
                     sdk_response = parse_api_response(response)
+                    online = sdk_response.get('online_state')
+                    state = sdk_response.get('state')
                     print(
-                        f"run_loop Success: {sdk_response.get('success')} State: {sdk_response.get('state')} "
+                        f"run_loop Success: {sdk_response.get('success')} State: {state} "
+                        f"online: {online} "
                         f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')} "
-                        f" message: {sdk_response.get('message')}"
+                        f" message: {sdk_response.get('message')}."
                     )
 
                     #
@@ -394,26 +431,42 @@ class ClientApplication(object):
                     #
                     if (
                         sdk_response.get("success")
-                        and sdk_response.get("state") == "PAIRING"  # see (SDK models)
+                        and state == "PAIRING"  # see (SDK models)
                     ):
                         print(
-                            f"Device is not paired. Pairing Code: {sdk_response.get('pairing_code')} Expires in: {sdk_response.get('expires')}s"
+                            f"Device is not paired. Pairing Code: {sdk_response.get('pairing_code')} Expires in: {sdk_response.get('expires')}s."
                         )
+
+                    #
+                    # Possibly the client has been deprovisioned or certs have expired.
+                    #
+                    if state in ["CONNECTING", "RECONNECTING", "DISCONNECTED"]:
+                        if online == "ONLINE":
+                            print(f"Unable to connect to the service, but the device is online. "
+                                  f"Likely, the certs have expired or the device has been deprovisioned.",
+                                  f"Consider, deprovision and re-pairing.")
+                            failed_connect_attempts_while_online += 1
+                            # Persistent in this case is about 30 seconds ( 10 tries x 3s interval )
+                            if failed_connect_attempts_while_online > 10:
+                                print("Too many failed connect attempts. Deprovisioning...")
+                                requests.post(DEPROVISION, json={'force': True}, timeout=5)
+                                self.running = False
+                                break
+
+                        elif online == "OFFLINE":
+                            print(f"Device is offline, unable to reach the internet and "
+                                  f"will be unable to connect until the network connection is restored.")
+
                     #
                     # CONNECTED: send any status update, check for an updated configuration.
                     #
-                    if sdk_response.get("success") and sdk_response.get("state") in [
-                        "CONNECTED",
-                        "RECONNECTING",
+                    if sdk_response.get("success") and state in [
+                        "CONNECTED"
                     ]:  # See (SDK models.py).
-                        # The service will respond appropriately for any state but best to only call these
-                        # when the SDK is CONNECTED or RECONNECTING.
+                        # The service will respond for any state but best to only call these when the SDK is CONNECTED
+                        # so that messages sent/received are handled and current.
                         self.get_configuration()
                         self.report_status()
-
-                    #
-                    # TODO: Handle revoked/expired certs
-                    #
 
                 else:
                     print(f"Connection failed. Status code: {response.status_code}")

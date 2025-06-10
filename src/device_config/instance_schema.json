@@ -5,45 +5,58 @@
   "maxProperties": 1,
   "properties": {
     "configuration": {
+      "$ref": "#/$protected/configuration"
+    },
+    "status": {
+      "$ref": "#/$protected/status"
+    }
+  },
+  "$immutable": {
+    "null": {
+      "type": "null"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "IDLE"
+      ]
+    },
+    "thumbnail_status": {
+      "description": "Thumbnail available if present",
+      "type": "object",
       "properties": {
-        "channels": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "$ref": "#/$defs/channel_ids"
-              },
-              "name": {
-                "type": "string"
-              },
-              "state": {
-                "$ref": "#/$immutable/state"
-              },
-              "output_configuration": {
-                "description": "Required param: also likely to be accessed programmatically",
-                "$ref": "#/$protected/output_configuration"
-              },
-              "source": {
-                "$ref": "#/$defs/inputs_ids"
-              },
-              "video_configuration": {
-                "$ref": "#/$defs/video_configuration"
-              },
-              "audio_configuration": {
-                "$ref": "#/$defs/audio_configuration"
-              }
-            },
-            "required": [
-              "id",
-              "state",
-              "output_configuration"
-            ],
-            "additionalProperties": false
-          }
+        "source": {
+          "$ref": "#/$defs/inputs_ids"
+        },
+        "local_path": {
+          "description": "Protocol supports jpg or png type for thumbnail images.",
+          "type": "string",
+          "pattern": "^(?:/[^/]+)*/?[^/]+\\.(jpg|png)$"
         }
+      },
+      "required": [
+        "source",
+        "local_path"
+      ]
+    },
+    "aes128_passcode": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{32}$",
+      "errorMessage": {
+        "pattern": "AES-128 passcode must be exactly 32 hexadecimal characters (0-9, a-f, A-F)"
       }
     },
+    "aes256_passcode": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "errorMessage": {
+        "pattern": "AES-256 passcode must be exactly 64 hexadecimal characters (0-9, a-f, A-F)"
+      }
+    }
+  },
+  "$protected": {
+    "description": "$Protected: Add/Remove ok but altering existing params not allowed",
     "status": {
       "properties": {
         "thumbnails": {
@@ -65,7 +78,7 @@
               "type": "string"
             },
             "system_type": {
-              "$ref": "#/$defs/system_types"
+              "$ref": "#/$protected/system_types"
             },
             "cpu_utilization": {
               "type": "integer",
@@ -129,13 +142,13 @@
                 "$ref": "#/$immutable/state"
               },
               "output_status": {
-                "$ref": "#/$defs/output_status"
+                "$ref": "#/$protected/output_status"
               },
               "video_status": {
-                "$ref": "#/$defs/video_status"
+                "$ref": "#/$protected/video_status"
               },
               "audio_status": {
-                "$ref": "#/$defs/audio_status"
+                "$ref": "#/$protected/audio_status"
               }
             },
             "required": [
@@ -149,103 +162,71 @@
       },
       "required": [
         "system",
+        "inputs",
         "channels"
       ]
-    }
-  },
-  "$immutable": {
-    "null": {
-      "type": "null"
     },
-    "state": {
-      "type": "string",
-      "enum": [
-        "ACTIVE",
-        "IDLE"
-      ]
-    },
-    "thumbnail_status": {
-      "description": "Thumbnail available if present",
-      "type": "object",
+    "configuration": {
       "properties": {
-        "source": {
-          "$ref": "#/$defs/inputs_ids"
-        },
-        "local_path": {
-          "description": "Protocol supports jpg or png type for thumbnail images.",
-          "type": "string",
-          "pattern": "^(?:/[^/]+)*/?[^/]+\\.(jpg|png)$"
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/channel_ids"
+              },
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/$immutable/state"
+              },
+              "output_configuration": {
+                "description": "Required param: also likely to be accessed programmatically",
+                "$ref": "#/$protected/output_configuration"
+              },
+              "source": {
+                "$ref": "#/$defs/inputs_ids"
+              },
+              "video_configuration": {
+                "$ref": "#/$protected/video_configuration"
+              },
+              "audio_configuration": {
+                "$ref": "#/$protected/audio_configuration"
+              }
+            },
+            "required": [
+              "id",
+              "state",
+              "output_configuration"
+            ],
+            "additionalProperties": false
+          }
         }
-      },
-      "required": [
-        "source",
-        "local_path"
-      ]
-    },
-    "aes128_passcode": {
-      "type": "string",
-      "pattern": "^[0-9a-fA-F]{32}$",
-      "errorMessage": {
-        "pattern": "AES-128 passcode must be exactly 32 hexadecimal characters (0-9, a-f, A-F)"
       }
     },
-    "aes256_passcode": {
-      "type": "string",
-      "pattern": "^[0-9a-fA-F]{64}$",
-      "errorMessage": {
-        "pattern": "AES-256 passcode must be exactly 64 hexadecimal characters (0-9, a-f, A-F)"
-      }
-    }
-  },
-  "$protected": {
-    "description": "$Protected: Add/Remove ok but altering existing params not allowed",
     "output_configuration": {
       "type": "object",
       "maxProperties": 1,
       "properties": {
         "srt": {
-          "$ref": "#/$defs/srt_settings"
+          "$ref": "#/$protected/srt_settings"
         },
         "udp": {
-          "$ref": "#/$defs/udp_settings"
+          "$ref": "#/$protected/udp_settings"
         },
         "rtp": {
-          "$ref": "#/$defs/rtp_settings"
+          "$ref": "#/$protected/rtp_settings"
         }
       },
       "additionalProperties": false
-    }
-  },
-  "$defs": {
-    "system_types": {
-      "type": "string",
-      "enum": [
-        "ENCODER",
-        "DECODER",
-        "CAMERA"
-      ]
     },
     "srt_ip_address": {
       "type": "string",
       "anyOf": [
         { "format": "ipv4" },
         { "format": "ipv6" }
-      ]
-    },
-    "inputs_ids": {
-      "type": "string",
-      "description": "List all available inputs on the device by name",
-      "enum": [
-        "SDI-1",
-        "HDMI-1"
-      ]
-    },
-    "channel_ids": {
-      "type": "string",
-      "description": "Defines all available channels for configuration.  Eg. This is a 2 channel device",
-      "enum": [
-        "Channel1",
-        "Channel2"
       ]
     },
     "video_configuration": {
@@ -275,7 +256,7 @@
           "$ref": "#/$defs/video_bitrate"
         },
         "rate_control": {
-          "$ref": "#/$defs/rate_control"
+          "$ref": "#/$defs/video_rate_control"
         },
         "deinterlacing": {
           "$ref": "#/$defs/deinterlacing"
@@ -305,48 +286,35 @@
           "items": {
             "type": "object",
             "properties": {
+              "id": {
+                "$ref": "#/$defs/audio_pair_ids"
+              },
               "state": {
                 "$ref": "#/$immutable/state"
               },
               "language": {
-                "description": "3 letter, ISO 639-2 language code",
-                "type": "string",
-                "pattern": "^[a-z]{3}$"
+                "$ref": "#/$defs/language"
               },
               "codec": {
-                "type": "string",
-                "enum": [
-                  "pcm",
-                  "aac",
-                  "opus"
-                ]
+                "$ref": "#/$defs/audio_codecs"
               },
               "rate_control": {
-                "type": "string",
-                "enum": [
-                  "vbr",
-                  "cbr"
-                ]
+                "$ref": "#/$defs/audio_rate_control"
               },
               "bitrate": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 500000
+                "$ref": "#/$defs/audio_bitrate"
               },
               "sample_rate": {
-                "type": "integer",
-                "enum": [
-                  32000,
-                  44100,
-                  48000,
-                  96000,
-                  192000
-                ]
+                "$ref": "#/$defs/audio_sample_rate"
               },
               "pid": {
                 "type": "integer"
               }
-            }
+            },
+            "required": [
+              "id",
+              "state"
+            ]
           }
         }
       },
@@ -384,21 +352,21 @@
           "type": "string"
         },
         "ip": {
-          "$ref": "#/$defs/srt_ip_address"
+          "$ref": "#/$protected/srt_ip_address"
         },
         "port": {
           "type": "integer",
-          "minimum": 1025,
-          "maximum": 65535
+          "minimum": 1024,
+          "maximum": 49151
         },
         "latency_ms": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 10000
+          "maximum": 30000
         },
         "encryption": {
           "description": "encryption is required, but can specify encryption: {}",
-          "$ref": "#/$defs/encryption"
+          "$ref": "#/$protected/encryption"
         }
       },
       "required": [
@@ -459,17 +427,136 @@
       ],
       "additionalProperties": false
     },
-    "channels": {
-      "type": "integer",
+    "output_status": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/$immutable/state"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "video_status": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/$immutable/state"
+        },
+        "bitrate": {
+          "$ref": "#/$defs/video_bitrate_status"
+        },
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        }
+      },
+      "required": [
+        "state",
+        "bitrate",
+        "metadata"
+      ],
+      "additionalProperties": false
+    },
+    "audio_status": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/$immutable/state"
+        },
+        "bitrate": {
+          "$ref": "#/$defs/audio_bitrate_status"
+        }
+      },
+      "required": [
+        "state",
+        "bitrate"
+      ],
+      "additionalProperties": false
+    },
+    "system_types": {
+      "type": "string",
       "enum": [
-        1,
-        99
+        "ENCODER",
+        "DECODER",
+        "CAMERA"
       ]
+    }
+  },
+  "$defs": {
+    "inputs_ids": {
+      "type": "string",
+      "description": "List all available inputs on the device by name",
+      "enum": [
+        "SDI-1",
+        "HDMI-1"
+      ]
+    },
+    "channel_ids": {
+      "type": "string",
+      "description": "Defines all available channels for configuration.  Eg. This is a 2 channel device",
+      "enum": [
+        "Channel1",
+        "Channel2"
+      ]
+    },
+    "audio_pair_ids":  {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 31
+    },
+    "audio_bitrate_status": {
+      "description": "Units are commonly kbps",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 128
     },
     "audio_pairs": {
       "type": "integer",
       "minimum": 0,
       "maximum": 100
+    },
+    "language": {
+      "description": "3 letter, ISO 639-2 language code",
+      "type": "string",
+      "pattern": "^[a-z]{3}$"
+    },
+    "audio_codecs": {
+      "type": "string",
+      "enum": [
+        "pcm",
+        "aac",
+        "opus"
+      ]
+    },
+    "audio_rate_control": {
+      "type": "string",
+      "enum": [
+        "vbr",
+        "cbr"
+      ]
+    },
+    "audio_bitrate": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 500000
+    },
+    "audio_sample_rate": {
+      "type": "integer",
+      "enum": [
+        32000,
+        44100,
+        48000,
+        96000,
+        192000
+      ]
+    },
+    "video_bitrate_status": {
+      "description": "Units are commonly kbps",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20000000
     },
     "resolutions": {
       "type": "string",
@@ -549,10 +636,10 @@
     "video_bitrate": {
       "type": "integer",
       "description": "Units are commonly kbps",
-      "minValue": 250,
-      "maxValue": 500000
+      "minimum": 250,
+      "maximum": 500000
     },
-    "rate_control": {
+    "video_rate_control": {
       "type": "string",
       "enum": [
         "cbcr",
@@ -630,60 +717,6 @@
         "none",
         "auto"
       ]
-    },
-    "output_status": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "$ref": "#/$immutable/state"
-        }
-      },
-      "required": [
-        "state"
-      ],
-      "additionalProperties": false
-    },
-    "video_status": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "$ref": "#/$immutable/state"
-        },
-        "bitrate": {
-          "description": "Units are commonly kbps",
-          "type": "integer",
-          "minValue": 0,
-          "maxValue": 20000000
-        },
-        "metadata": {
-          "$ref": "#/$defs/metadata"
-        }
-      },
-      "required": [
-        "state",
-        "bitrate",
-        "metadata"
-      ],
-      "additionalProperties": false
-    },
-    "audio_status": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "$ref": "#/$immutable/state"
-        },
-        "bitrate": {
-          "description": "Units are commonly kbps",
-          "type": "integer",
-          "minValue": 0,
-          "maxValue": 128
-        }
-      },
-      "required": [
-        "state",
-        "bitrate"
-      ],
-      "additionalProperties": false
     }
   }
 }

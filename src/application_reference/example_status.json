@@ -5,7 +5,7 @@
       "serial": "123456789",
       "manufacturer": "Osprey",
       "system_type": "ENCODER",
-      "cpu_utilization": 50,
+      "cpu_utilization": 30,
       "memory_utilization": 50,
       "storage_utilization": 30,
       "temperature": 99,

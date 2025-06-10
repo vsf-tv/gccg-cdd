@@ -320,15 +320,57 @@ Use the following VST Host Service API requests to get status, start, stop the d
 
 Step 0
 ```bash
-Get Status
+Get Status (DescribeDevice)
 
 This will request the latest status message posted by the ARD/SDK to the VSF Host Service.  
-Request Path:  <base_endpoint>/dev/device/{device-id} 
+Request Path:  <base_endpoint>/dev/device/{device-id}
+Request Path:  <base_endpoint>/dev/device/{device-id}?include_schema=true|false
 Request Type: GET 
 e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01
 
 Expected Response:
-< A complete instance_schema-compliant status message json.>
+{
+    "device_id": "001XI02IJ2FtSIirk01",
+    "message": "",
+    "errors": [],
+    "status": {
+        "status": {
+           <see Instance Schema.  See Report Status in MessageProtocol API doc>
+        }
+    },
+    "configuration": {
+        "configuration": {
+          <see Instance Schema.  See Report Status in MessageProtocol API doc>
+        }
+    },
+    "schema": {
+       <Instance Schema: if query string param ?include_schema=true> default=false
+    },
+    "online_details": "online: 0d 0h 12m",
+    "online": true,
+    "cert_expiration": "59d 23h 47m"
+}
+
+
+Get All Devices (ListDevices)
+This will return all devices currently regitered.
+Request Path:  <base_endpoint>/dev/devices/
+Request Type: GET
+e.g.   <base_endpoint>/dev/devices
+
+Expected Response:
+[
+    {
+        "device_id": "001XI02IJ2FtSIirk01",
+        "message": "",
+        "errors": [],
+        "online_details": "online: 0d 0h 11m",
+        "online": true
+    }
+    ,
+    ...
+]
+
 ```
 
 Step 1
@@ -472,7 +514,24 @@ To view the image you must base64 decode base64_image and open in an appropriate
 
 ### De-Register or Un-claim the device
 ```bash
-# This API is WIP and will be available soon. 
-# For now, delete the credentials in $CERTS_PATH/$ID on the device.  You will be able to deprovision the 
-# device in the service when this is implemented.  
+# This initiates an un-pairing process on the client.  A connected client will be disconnected and subsequent connection
+# attempts responses =  Response(state)=CONNECTING and Response(online_state)=ONLINE.
+# A persistent CONNECTING/ONLINE condition indicates the device has been deprovisioned or credentials have expired.
+
+# Note: The MQTT protocol and supporting clients unfortunately do not provide a positive indication of expired certs
+# on connection attempts.
+
+
+Request Path:  <base_endpoint>/dev/deprovision/{device-id}
+Request Type: PUT
+e.g.   <base_endpoint>/dev/deprovision/001XI02IJ2FtSIirk01
+
+Expected Host Service Response:
+{
+    "device_id": "001XI02IJ2FtSIirk01",
+    "message": "Deprovisioned device: 001XI02IJ2FtSIirk01.",
+    "errors": []
+}
+
+# Check the device is no longer a registered device (see DescribeDevice/ListDevices above).
 ```

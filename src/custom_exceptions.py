@@ -84,7 +84,13 @@ class ConnectTimeout(SDKBaseException):
         super().__init__(message, details)
 
 
+# Open SSL Setup
+class SSLSetupError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "SSL setup error."
+        super().__init__(message, details)
 #
+
 # PAIRING
 #
 
@@ -233,4 +239,18 @@ class InvalidThumbnailSubscription(SDKBaseException):
 class ThumbnailProcessingError(SDKBaseException):
     def __init__(self, details=""):
         message = "Could not process Thumbnail subscription."
+        super().__init__(message, details)
+
+#
+# Deprovision related errors
+#
+class InvalidDeprovisionRequest(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Could not process deprovision message from host service."
+        super().__init__(message, details)
+
+
+class DeprovisionError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Unknown Deprovision error."
         super().__init__(message, details)
