@@ -33,7 +33,6 @@
     ],
     "channels": [
       {
-        "id": "Channel1",
         "state": "IDLE",
         "output_status": {
           "state": "IDLE"

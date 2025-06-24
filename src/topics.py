@@ -14,7 +14,7 @@
 
 from custom_exceptions import SystemIntegrationError
 from service_api_models import HostSettings
-
+from custom_logger import logger
 
 class Topics(object):
     """
@@ -28,7 +28,7 @@ class Topics(object):
     """
 
     def __init__(self, device_id: str, host_settings: HostSettings):
-        print(f"Host Settings: {host_settings}")
+        logger.info(f"Host Settings: {host_settings}")
         self.device_id = device_id
         try:
             # Subscribe: receiving schema-compliant configuration messages. (persistent topic)
@@ -52,11 +52,17 @@ class Topics(object):
             # Subscribe: service requests deprovision, inform the client (persistent topic)
             self.deprovision_inform_client = host_settings.sub_deprovision_topic
 
-            print(f"Topics: Sub: {self.update_configuration}")
-            print(f"Topics: Sub: {self.update_certs}")
-            print(f"Topics: Sub: {self.update_thumbnail}")
-            print(f"Topics: Pub: {self.report_schema}")
-            print(f"Topics: Pub: {self.report_status}")
+            # Subscribe:  informs the client about the current log subscription (persistent topic)
+            self.update_log = host_settings.sub_update_log_subscription_topic
+
+            logger.info(f"Topics: Sub: {self.update_configuration}")
+            logger.info(f"Topics: Sub: {self.update_certs}")
+            logger.info(f"Topics: Sub: {self.update_thumbnail}")
+            logger.info(f"Topics: Pub: {self.report_schema}")
+            logger.info(f"Topics: Pub: {self.report_status}")
+            logger.info(f"Topics: Pub: {self.deprovision_inform_service}")
+            logger.info(f"Topics: Sub: {self.deprovision_inform_client}")
+            logger.info(f"Topics: Pub: {self.update_log}")
         except Exception as e:
             raise SystemIntegrationError(details="Could not load host MQTT Topics for service")
 

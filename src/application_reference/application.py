@@ -40,6 +40,7 @@ DEPROVISION = f"http://127.0.0.1:{PORT}/deprovision"
 
 # From project source root.
 current_dir = os.path.dirname(os.path.abspath(__file__))
+CONFIGURATION_JSON_FILE = os.path.join(current_dir, "example_config.json")
 STATUS_JSON_FILE = os.path.join(current_dir, "example_status.json")
 
 
@@ -63,6 +64,7 @@ class Encoder(object):
         self.process = None
         self.protocol = None
         self.srt_settings = None
+        self.status_payload: dict = {}
 
     def running(self):
         # Carefully Start/Stop the ffmpeg encoder by monitoring the process. Don't want to start multiple.
@@ -70,31 +72,33 @@ class Encoder(object):
             return False
         return self.process.poll() is None
 
+    def _update_encoder_config(self, updated_config: dict):
+        self.config_payload = updated_config
+
     def get_encoder_status(self):
         """
-        (Currently) This application simply reads and makes minor changes to status file.
-        Eventually this application should generate a complete status based on the current state of the system
-        and the ffmpeg encoder.
+        (Currently) This application reference design reads and makes minor changes to status that is read from a file.
+        In practice, a real application should generate a complete status based on the current state.
 
         Returns:
             A instance-schema compliant status payload that represents the current encoder status.
         """
 
         with open(STATUS_JSON_FILE, "r") as f:
-            status_payload = json.load(f)
+            self.status_payload = json.load(f)
             if not self.running():
-                status_payload["status"]["channels"][0]["state"] = "IDLE"
-                status_payload["status"]["channels"][0]["output_status"]["state"] = "IDLE"
-                status_payload["status"]["channels"][0]["video_status"]["state"] = "IDLE"
-                status_payload["status"]["channels"][0]["video_status"]["bitrate"] = 0
-                status_payload["status"]["channels"][0]["audio_status"]["state"] = "IDLE"
+                self.status_payload["status"]["channels"][0]["state"] = "IDLE"
+                self.status_payload["status"]["channels"][0]["output_status"]["state"] = "IDLE"
+                self.status_payload["status"]["channels"][0]["video_status"]["state"] = "IDLE"
+                self.status_payload["status"]["channels"][0]["video_status"]["bitrate"] = 0
+                self.status_payload["status"]["channels"][0]["audio_status"]["state"] = "IDLE"
             else:
-                status_payload["status"]["channels"][0]["state"] = "ACTIVE"
-                status_payload["status"]["channels"][0]["output_status"]["state"] = "ACTIVE"
-                status_payload["status"]["channels"][0]["video_status"]["state"] = "ACTIVE"
-                status_payload["status"]["channels"][0]["video_status"]["bitrate"] = get_simulated_bitrate()
-                status_payload["status"]["channels"][0]["audio_status"]["state"] = "ACTIVE"
-            return status_payload
+                self.status_payload["status"]["channels"][0]["state"] = "ACTIVE"
+                self.status_payload["status"]["channels"][0]["output_status"]["state"] = "ACTIVE"
+                self.status_payload["status"]["channels"][0]["video_status"]["state"] = "ACTIVE"
+                self.status_payload["status"]["channels"][0]["video_status"]["bitrate"] = get_simulated_bitrate()
+                self.status_payload["status"]["channels"][0]["audio_status"]["state"] = "ACTIVE"
+            return self.status_payload
 
     def start(self, str_settings: dict):
 
@@ -156,7 +160,7 @@ class Encoder(object):
 
         Note: This function comprehends the instance schema that it provided to the SDK on SDK Start.
                The SDK validated the service-provided configuration message conforms to the schema.
-               As a result,we can confidently parse the configuration JSON here.
+               As a result, we can confidently parse the configuration JSON here.
         """
         if not update_message:
             print("No update available")
@@ -206,7 +210,7 @@ class ThumbnailSimulator(threading.Thread):
     Given a source_dir with a bunch of images (all jpg or all png) copy to dest at the interval.
     The dest_dir must match the thumbnail_status from the instance schema and status message.
 
-    In practice the video encoder would be dumping images from the inputs and/or a decoder from the outputs
+    In practice, the video encoder would be dumping images from the inputs and/or a decoder from the outputs.
     """
     def __init__(self, source_dir: str, dest: str, interval: int, name: str):
         super().__init__()
@@ -272,6 +276,7 @@ class ClientApplication(object):
         self.encoder = Encoder()
         self.running = True
         self.latest_configuration_id = INITIAL_CONFIG_ID
+        self.current_configuration: dict = {}
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
         self.thumbnail_emitter_sdi = ThumbnailSimulator(
@@ -290,8 +295,8 @@ class ClientApplication(object):
     def signal_handler(self, signum, frame):
         """
         Handle shutdown signals gracefully.
-        Applications should make sure they call disconnect() when they close inform the service
-        the client has gone away.
+        Applications should make disconnect() request when they close inform the service the client has gone away.
+        Alternatively, shutting down the client process will attempt to inform the service in it shutdown hanlder.
         """
         print("Received shutdown signal, cleaning up...")
         response = requests.get(DISCONNECT, timeout=1)
@@ -302,16 +307,15 @@ class ClientApplication(object):
         Report the current state of the system and the ffmpeg encoder.
         TODO:  This application will provide a complete status based on the actual application status.
         """
-        with open(STATUS_JSON_FILE, "r") as f:
-            status_payload = self.encoder.get_encoder_status()
-            response = requests.post(REPORT_STATUS, json=status_payload, timeout=5)
-            if response.status_code == 200:
-                sdk_response = parse_api_response(response)
-                print(
-                    f"report_status Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
-                    f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
-                    f" message: {sdk_response.get('message')}"
-                )
+        status_payload = self.encoder.get_encoder_status() | self.current_configuration
+        response = requests.post(REPORT_STATUS, json=status_payload, timeout=5)
+        if response.status_code == 200:
+            sdk_response = parse_api_response(response)
+            print(
+                f"report_status Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
+                f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
+                f" message: {sdk_response.get('message')}"
+            )
 
     def get_configuration(self):
         """
@@ -330,7 +334,6 @@ class ClientApplication(object):
             configuration: dict = sdk_response.get("configuration", {})
             update_id: str = configuration.get("update_id", "")
             configuration_payload: dict = configuration.get("payload", {})
-
             # ID is an arbitrary string. Check for a difference.
             # If there is no change (ie already processed based on the ID) then do nothing
             # because we've already processed this configuration.
@@ -338,6 +341,14 @@ class ClientApplication(object):
                 print(f"New update. update_id: {update_id}")
                 self.latest_configuration_id = update_id
                 self.encoder.handle_update(configuration_payload)
+
+                # This simple reference design application simply reflects the host-service-provided 'desired'
+                # configuration back to the host service as the 'actual' configuration. In real application,
+                # a local user might override one or more settings or for some reason be unable to comply with
+                # (part of) the desired configuration.  The application reports status and current configuration
+                # via the report_status() API.
+                # See: Host Service API: configuration: desired/actual.
+                self.current_configuration = configuration_payload
 
     def run_loop(self, host_id: str):
         """
@@ -440,7 +451,7 @@ class ClientApplication(object):
                     #
                     # Possibly the client has been deprovisioned or certs have expired.
                     #
-                    if state in ["CONNECTING", "RECONNECTING", "DISCONNECTED"]:
+                    if state in ["DISCONNECTED"]:
                         if online == "ONLINE":
                             print(f"Unable to connect to the service, but the device is online. "
                                   f"Likely, the certs have expired or the device has been deprovisioned.",
@@ -465,6 +476,7 @@ class ClientApplication(object):
                     ]:  # See (SDK models.py).
                         # The service will respond for any state but best to only call these when the SDK is CONNECTED
                         # so that messages sent/received are handled and current.
+                        failed_connect_attempts_while_online = 0
                         self.get_configuration()
                         self.report_status()
 

@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-
-import attr
 import cattr
 from topics import Topics
 import os
@@ -22,19 +20,20 @@ import shutil
 from threading import Lock
 from typing import Union, Optional
 from custom_exceptions import (
-    CertificatesInvalid,
     CertificatesWriteError,
     CertificatesReadError,
     SystemIntegrationError,
     DeprovisionError
 )
+from custom_logger import logger
 from utils import generate_csr, generate_client_keys
 
 from service_api_models import (
     HostSettings,
     PairResponse,
     AuthResponse,
-    ConnectionSettings
+    ConnectionSettings,
+    CertRotate
 )
 
 
@@ -66,7 +65,6 @@ class CredentialStore(object):
                 details=f"Certs directory is not writable: {self.base}"
             )
 
-        # self.device_id_file: str = os.path.join(self.dir, "device_id")
         self.ca_cert_file: str = os.path.join(self.dir, "ca_cert")
         self.device_cert_file: str = os.path.join(self.dir, "device_cert")
         self.priv_key_file: str = os.path.join(self.dir, "priv_key")
@@ -74,37 +72,42 @@ class CredentialStore(object):
         self.host_settings: Union[HostSettings, None] = None
         self.connection_settings_file: str = os.path.join(self.dir, "connection_settings")
         self.connection_settings: Optional[ConnectionSettings] = None
-        self.uri: str = ""
-        self.region: str = ""
-        self.device_id: str = ""
         self._topics = None
-        self.pub_key: str = ""
-        self.priv_key: str = ""
-        self.csr: str = ""
+        self.priv_key: str = ""  # need to keep between pair() and auth()
+        self.pub_key: str = ""  # need to keep between pair() and auth()
+        self.csr: str = ""  # need to keep between pair() and auth()
         self.read_write_lock = Lock()
+
+    def get_device_id(self) -> str:
+        return self.connection_settings.device_id
+
+    def get_uri(self) -> str:
+        return self.connection_settings.uri
+
+    def get_region(self) -> str:
+        return self.connection_settings.region
 
     def get_topics(self) -> Union[Topics, None]:
         """
         Returns the topics object for this device when the device_id is known.
 
         Returns:
-            Union[Topics, None]   None when certs aren't initialized with a device_id.
+            Union[Topics, None] None when certs aren't initialized with a device_id.
         """
         return self._topics
 
     def generate_keys_and_csr(self):
         """
-        Generate keys and CSR for the device.
-        Service will be given the pub_key and Certificate Signing Request (CSR) in order to
-        generate device_cert for the MQTT connection.
+        Generate keys and Certificate Singing Request (CSR) needed for the service to
+        generate a device_cert for the MQTT connection.
         """
         if not self.csr:
-            print("Generating keys and CSR")
+            logger.info("Generating keys and CSR")
             self.pub_key, self.priv_key = generate_client_keys()
             self.csr = generate_csr(self.priv_key)
         else:
             # No need to re-generate.
-            print("Keys and CSR already generated")
+            logger.info("Keys and CSR already generated")
 
     def read_from_filesystem(self) -> bool:
         """
@@ -117,15 +120,15 @@ class CredentialStore(object):
             CertificatesInvalid
         """
         with self.read_write_lock:
-            print(f"Check if device has certs file: {self.dir}")
+            logger.info(f"Check if device has certs file: {self.dir}")
 
             if not os.path.exists(self.dir):
                 # This is normal if the device has never paired.
-                print(f"Missing: certs directory, not paired yet: {self.dir}")
+                logger.info(f"Missing: certs directory, not paired yet: {self.dir}")
                 return False
 
             if not os.path.exists(self.ca_cert_file):
-                print(f"Missing ca_cert_file file, not paired yet: {self.ca_cert_file}")
+                logger.info(f"Missing ca_cert_file file, not paired yet: {self.ca_cert_file}")
                 return False
 
             # At this point, Certs should ALL be available. Fatal otherwise.
@@ -145,14 +148,13 @@ class CredentialStore(object):
                 with open(self.connection_settings_file, "r") as f:
                     self.connection_settings = cattr.structure(json.loads(f.read()), ConnectionSettings)
 
-                    self.device_id = self.connection_settings.device_id
-                    self.uri = self.connection_settings.uri
-                    self.region = self.connection_settings.region
-
             except Exception as e:
                 # file system error or some kind of permissions problem.
                 raise CertificatesReadError(
-                    details=f"Invalid connection_settings file: {self.connection_settings_file}.  Deregister and re-pair the device"
+                    details=(
+                        f"Invalid connection_settings file: {self.connection_settings_file}. "
+                        "Deregister and re-pair the device."
+                    )
                 ) from e
 
             try:
@@ -166,7 +168,7 @@ class CredentialStore(object):
 
             # Topics are typically device_id dependent in a host service for message routing
             # and IAM controls.
-            self._topics = Topics(self.device_id, self.host_settings)
+            self._topics = Topics(self.connection_settings.device_id, self.host_settings)
 
             # Cert files exists, initialized and ready to use.
             return True
@@ -191,9 +193,8 @@ class CredentialStore(object):
             CertificatesWriteError (See custom_exceptions)
             CertificatesInvalid
         """
-        self.device_id = pair_response.device_id
         with self.read_write_lock:
-            print("writing certs to file")
+            logger.info("writing certs to file")
             try:
                 # This has already been validated to exist.
                 if not os.path.exists(self.dir):
@@ -226,17 +227,39 @@ class CredentialStore(object):
                     details=f"Unable to write certificates to the device: {e}."
                 )
 
-            self._topics = Topics(self.device_id, pair_response.host_settings)
+            self._topics = Topics(self.connection_settings.device_id, pair_response.host_settings)
 
-    def update_device_cert_file(self, device_cert: str):
+    def rotate_certs(self, certs_rotate: CertRotate) -> bool:
         """
-        Updates the device cert file on the filesystem.
+        Updates the device cert and connection settings file on the filesystem.
+        If an update is needed, then return True
+
         Args:  device_cert PEM str format.
         """
-        assert device_cert, "Device_cert is required."
-        with open(self.device_cert_file, "w") as f:
-            print(f"Updating device cert file: {self.device_cert_file}.")
-            f.write(device_cert)
+        need_to_update: bool = False
+
+        # Update a changed device cert persisted in the device_cert_file.
+        with open(self.device_cert_file, "r") as file:
+            current_cert_pem_str = file.read()
+            if certs_rotate.device_cert != current_cert_pem_str:
+                logger.info("Updating device credentials")
+                with open(self.device_cert_file, "w") as f:
+                    f.write(certs_rotate.device_cert)
+                need_to_update = True
+
+        # Update a changed MQTT Uri or Region description persisted in the connection_settings file.
+        if (certs_rotate.MQTTUri != self.connection_settings.uri or
+                certs_rotate.region != self.connection_settings.region):
+            with open(self.connection_settings_file, "w") as f:
+                self.connection_settings = ConnectionSettings(
+                    device_id=self.connection_settings.device_id,
+                    uri=certs_rotate.MQTTUri,
+                    region=certs_rotate.region
+                )
+                f.write(json.dumps(cattr.unstructure(self.connection_settings)))
+                need_to_update = True
+
+        return need_to_update
 
     def deprovision(self):
         """

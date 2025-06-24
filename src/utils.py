@@ -25,7 +25,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from custom_exceptions import SystemIntegrationError
+from custom_exceptions import SystemIntegrationError, UploadError
+from custom_logger import logger
 
 
 def publish_message(client, topic: str, payload: str, qos: int, retain: bool):
@@ -42,7 +43,7 @@ def publish_message(client, topic: str, payload: str, qos: int, retain: bool):
         raise MQTTPublishError(details=f"MQTT publish error.Msg: {e}") from e
 
     if result == mqtt.MQTT_ERR_SUCCESS:
-        print(f"Message {mid} accepted for delivery")
+        logger.info(f"Message {mid} accepted for delivery")
         return
 
     raise MQTTPublishError(details=f"MQTT publish error. Response Code: {result}")
@@ -88,7 +89,7 @@ def validate_path_exists_and_writeable(path: str):
             with open(test_file, "w") as f:
                 f.write("")
             os.remove(test_file)
-            print(f"The directory {path} is writable")
+            logger.info(f"The directory {path} is writable")
         except Exception as e:
             raise PermissionError(f"The directory {path} is not writable: {str(e)}")
 
@@ -106,14 +107,13 @@ def ssl_alpn(ca_cert, device_cert, private_key, iot_protocol_name):
         Exception: For unknown errors accessing ssl primitives.
     """
     try:
-        print(f"open ssl version:{format(ssl.OPENSSL_VERSION)}")
+        logger.info(f"open ssl version:{format(ssl.OPENSSL_VERSION)}")
         ssl_context = ssl.create_default_context()
         ssl_context.set_alpn_protocols([iot_protocol_name])
         ssl_context.load_verify_locations(cafile=ca_cert)
         ssl_context.load_cert_chain(certfile=device_cert, keyfile=private_key)
         return ssl_context
     except Exception as e:
-        print(f"Failed to setup SSL. Msg:{e}")
         raise Exception(f"Failed to setup SSL. Msg:{e}")
 
 
@@ -129,7 +129,7 @@ def generate_client_keys() -> (str, str):
     Raises:
         Exception: For unknown errors accessing ssl primitives.
     """
-    print("Generating key pair")
+    logger.info("Generating key pair")
     # Generate private key.
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
@@ -164,7 +164,7 @@ def generate_csr(private_key_pem: str) -> str:
         csr: Certificate Signing Request str in PEM format
 
     """
-    print(f"Generating CSR")
+    logger.info(f"Generating CSR")
     private_key_b = serialization.load_pem_private_key(
         private_key_pem.encode('utf-8'),
         password=None,
@@ -235,9 +235,9 @@ class NetworkUtils(object):
             if self._check_online(site):
                 self.online = True
                 return True
-            print(f"Online check. Unable to reach: {site}")
+            logger.info(f"Online check. Unable to reach: {site}")
         self.online = False
-        print("Determined device is offline")
+        logger.info("Determined device is offline")
         return False
 
 
@@ -248,7 +248,7 @@ class NetworkUtils(object):
             _ = requests.get(site, timeout=2)
             return True
         except Exception as e:
-            print(f"Could not connect to: {site} mes: {e}")
+            logger.info(f"Could not connect to: {site} mes: {e}")
         return False
 
 
@@ -278,7 +278,7 @@ class OnlineChecker(threading.Thread):
             try:
                 self.online = OnlineStates.ONLINE if self.network_utils.is_device_online() else OnlineStates.OFFLINE
             except Exception as e:
-                print(f"Error checking online state: {e}")
+                logger.exception(f"Error checking online state: {e}")
                 self.online = OnlineStates.UNKNOWN
 
             for _ in range(100):  # 10 seconds total interval
@@ -290,3 +290,34 @@ class OnlineChecker(threading.Thread):
         self._stop_event.set()
         if self.is_alive():
             self.join()  # ensure garbage collection is performed
+
+
+def upload_file(local_path, presigned_put_remote_path: str, timeout: int, file_type: str):
+    """
+    Upload a file using the pre-signed URL: presigned_put_remote_path.
+
+    Args:
+        local_path: Path to the local file to upload
+        presigned_put_remote_path: pre-signed URL (PUT)
+
+    Raises:
+        requests.exceptions.RequestException: If the upload fails or times out.
+    """
+    logger.info(f"Uploading {file_type} file: {local_path[-20:]}... to: {presigned_put_remote_path[-20:]}...")
+    with open(local_path, 'rb') as file:
+        # Explicitly read the file first to ensure we get a complete copy, not a partially written file.
+        with open(local_path, 'rb') as f:
+            file_content = f.read()
+        try:
+            response = requests.put(
+                url=presigned_put_remote_path,
+                data=file_content,
+                timeout=timeout
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            # Could be a temporary network outage.  Keep trying.
+            logger.warn(f"File: Could not upload: {e}")
+        except Exception as e:
+            raise UploadError(f"Unknown error uploading file: {e}") from e

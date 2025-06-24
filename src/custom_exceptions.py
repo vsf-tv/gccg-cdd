@@ -21,6 +21,7 @@
     see (models: Response() and Error())
 
 """
+from custom_logger import logger
 
 
 class SDKBaseException(Exception):
@@ -40,7 +41,9 @@ class SDKBaseException(Exception):
         super().__init__(message, details)
         self.message = message
         self.details = details
-        print(f"Raised an exception: message: {self.message} details: {self.details}.")
+        # All exceptions raised will print this handy message.
+        # formatter prints stack trace as well.
+        logger.exception(f"Raised an exception: message: {self.message} details: {self.details}.")
 
 
 #
@@ -220,7 +223,6 @@ class InvalidStatusMessageError(SDKBaseException):
         super().__init__(message, details)
 
 
-# TODO: Add runtime checking for schema validation.
 class InvalidSchemaError(SDKBaseException):
     def __init__(self, details=""):
         message = "Invalid schema was rejected."
@@ -228,7 +230,7 @@ class InvalidSchemaError(SDKBaseException):
 
 
 #
-# THUMBNAIL related errors
+# THUMBNAIL Request related errors
 #
 class InvalidThumbnailSubscription(SDKBaseException):
     def __init__(self, details=""):
@@ -240,6 +242,25 @@ class ThumbnailProcessingError(SDKBaseException):
     def __init__(self, details=""):
         message = "Could not process Thumbnail subscription."
         super().__init__(message, details)
+
+
+#
+# Logs Request related errors
+#
+class InvalidLogsSubscription(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Invalid Logs subscription message from the service was rejected."
+        super().__init__(message, details)
+
+
+#
+# General Uploading errors
+#
+class UploadError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Could not upload file."
+        super().__init__(message, details)
+
 
 #
 # Deprovision related errors

@@ -24,6 +24,8 @@ class HostConfig(object):
             )
         ]
     )
+    thumbnail_max_size_KB: int = attr.field(validator=attr.validators.instance_of(int))
+    log_file_max_size_KB: int = attr.field(validator=attr.validators.instance_of(int))
     pairing_url: str = attr.field(validator=attr.validators.instance_of(str))
     auth_url: str = attr.field(validator=attr.validators.instance_of(str))
     online_check_urls: List[str] = attr.ib(
@@ -47,10 +49,8 @@ def get_host_config(host_id: str, device_type: str) -> HostConfig:
         config = get_json_from_host_configuration_dir(f"{host_id}.json")
         ret = cattr.structure(config, HostConfig)
     except (TypeError, ValueError, AttributeError) as e:
-        print(f"HostConfiguration: Payload Invalid.")
         raise HostConfigurationError(details=f"Invalid structure.  Msg: {e}") from e
     except Exception as e:
-        print(f"HostConfiguration:  Can not parse.")
         raise HostConfigurationError(details=f"Can not parse.  Msg: {e}") from e
 
     if device_type not in ret.device_types:

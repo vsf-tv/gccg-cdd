@@ -1,8 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-09/schema#",
   "title": "Discovery Protocol Schema",
-  "description": "Supply either status or configuration message",
-  "maxProperties": 1,
+  "description": "Supply status and/or configuration in the message",
   "properties": {
     "configuration": {
       "$ref": "#/$protected/configuration"
@@ -17,6 +16,7 @@
     },
     "state": {
       "type": "string",
+      "default": "IDLE",
       "enum": [
         "ACTIVE",
         "IDLE"
@@ -56,7 +56,7 @@
     }
   },
   "$protected": {
-    "description": "$Protected: Add/Remove ok but altering existing params not allowed",
+    "description": "$Protected: Add/Remove OK but altering existing params is not allowed",
     "status": {
       "properties": {
         "thumbnails": {
@@ -72,6 +72,9 @@
               "type": "string"
             },
             "serial": {
+              "type": "string"
+            },
+            "mac_address": {
               "type": "string"
             },
             "manufacturer": {
@@ -132,12 +135,11 @@
         },
         "channels": {
           "type": "array",
+          "maxItems": 2,
+          "description": "This is a 2 channel device.",
           "items": {
             "type": "object",
             "properties": {
-              "id": {
-                "$ref": "#/$defs/channel_ids"
-              },
               "state": {
                 "$ref": "#/$immutable/state"
               },
@@ -152,7 +154,6 @@
               }
             },
             "required": [
-              "id",
               "state",
               "output_status"
             ],
@@ -170,15 +171,11 @@
       "properties": {
         "channels": {
           "type": "array",
+          "maxItems": 2,
+          "description": "This is a 2 channel device.",
           "items": {
             "type": "object",
             "properties": {
-              "id": {
-                "$ref": "#/$defs/channel_ids"
-              },
-              "name": {
-                "type": "string"
-              },
               "state": {
                 "$ref": "#/$immutable/state"
               },
@@ -197,7 +194,6 @@
               }
             },
             "required": [
-              "id",
               "state",
               "output_configuration"
             ],
@@ -239,30 +235,13 @@
           "$ref": "#/$defs/framerates"
         },
         "codec": {
-          "type": "object",
-          "properties": {
-            "h264": {
-              "$ref": "#/$defs/h264_settings"
-            },
-            "h265": {
-              "$ref": "#/$defs/h265_settings"
-            },
-            "av1": {
-              "$ref": "#/$defs/av1_settings"
-            }
-          }
+          "$ref": "#/$defs/codec_settings"
         },
         "bitrate": {
           "$ref": "#/$defs/video_bitrate"
         },
-        "rate_control": {
-          "$ref": "#/$defs/video_rate_control"
-        },
         "deinterlacing": {
           "$ref": "#/$defs/deinterlacing"
-        },
-        "qp_settings": {
-          "$ref": "#/$defs/qp_settings"
         },
         "gop_size": {
           "$ref": "#/$defs/gop_size"
@@ -278,17 +257,13 @@
     },
     "audio_configuration": {
       "properties": {
-        "number_audio_pairs": {
-          "$ref": "#/$defs/audio_pairs"
-        },
         "audio_pairs": {
           "type": "array",
+          "maxItems": 4,
+          "description": "This is a 4 audio pair device.",
           "items": {
             "type": "object",
             "properties": {
-              "id": {
-                "$ref": "#/$defs/audio_pair_ids"
-              },
               "state": {
                 "$ref": "#/$immutable/state"
               },
@@ -312,15 +287,11 @@
               }
             },
             "required": [
-              "id",
               "state"
             ]
           }
         }
       },
-      "required": [
-        "number_audio_pairs"
-      ],
       "additionalProperties": false
     },
     "encryption": {
@@ -493,45 +464,29 @@
         "HDMI-1"
       ]
     },
-    "channel_ids": {
-      "type": "string",
-      "description": "Defines all available channels for configuration.  Eg. This is a 2 channel device",
-      "enum": [
-        "Channel1",
-        "Channel2"
-      ]
-    },
-    "audio_pair_ids":  {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 31
-    },
     "audio_bitrate_status": {
       "description": "Units are commonly kbps",
       "type": "integer",
       "minimum": 0,
       "maximum": 128
     },
-    "audio_pairs": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 100
-    },
     "language": {
       "description": "3 letter, ISO 639-2 language code",
       "type": "string",
+      "default": "eng",
       "pattern": "^[a-z]{3}$"
     },
     "audio_codecs": {
       "type": "string",
       "enum": [
-        "pcm",
+        "passthrough",
         "aac",
         "opus"
       ]
     },
     "audio_rate_control": {
       "type": "string",
+      "default": "vbr",
       "enum": [
         "vbr",
         "cbr"
@@ -539,11 +494,13 @@
     },
     "audio_bitrate": {
       "type": "integer",
+      "default": 10000,
       "minimum": 0,
       "maximum": 500000
     },
     "audio_sample_rate": {
       "type": "integer",
+      "default": 48000,
       "enum": [
         32000,
         44100,
@@ -560,6 +517,7 @@
     },
     "resolutions": {
       "type": "string",
+      "default": "1920x1080",
       "enum": [
         "passthrough",
         "7680x4320",
@@ -579,6 +537,7 @@
     },
     "framerates": {
       "type": "integer",
+      "default": 60,
       "enum": [
         2997,
         5994,
@@ -590,65 +549,127 @@
         60
       ]
     },
-    "video_codecs": {
-      "type": "string",
-      "enum": [
-        "h264",
-        "h265",
-        "av1"
-      ]
-    },
     "h264_settings": {
-      "type": "object",
-      "properties": {
-        "profile": {
-          "type": "string",
-          "enum": [
-            "main",
-            "baseline",
-            "high",
-            "high10",
-            "high422",
-            "high444"
-          ]
-        }
+      "profile": {
+        "$ref": "#/$defs/h264_profiles"
+      },
+      "rate_control": {
+        "type": "string",
+        "default": "vbr",
+        "enum": [
+          "vbr",
+          "cbr"
+        ]
+      },
+      "qp_settings": {
+        "type": "string",
+        "default": "high_quality",
+        "enum": [
+          "high_quality",
+          "balanced",
+          "size_optimized",
+          "dynamic"
+        ]
       }
     },
     "h265_settings": {
       "profile": {
+        "$ref": "#/$defs/h265_profiles"
+      },
+      "rate_control": {
         "type": "string",
+        "default": "vbr",
         "enum": [
-          "main",
-          "main10",
-          "main422",
-          "main444"
+          "vbr",
+          "cbr"
+        ]
+      },
+      "qp_settings": {
+        "type": "string",
+        "default": "high_quality",
+        "enum": [
+          "high_quality",
+          "balanced",
+          "size_optimized",
+          "dynamic"
         ]
       }
     },
     "av1_settings": {
+      "profile": {
+        "$ref": "#/$defs/av1_profiles"
+      },
+      "rate_control": {
+        "type": "string",
+        "default": "qvbr",
+        "enum": [
+          "qvbr",
+          "vbr",
+          "cbr"
+        ]
+      },
+      "qp_settings": {
+        "type": "string",
+        "default": "high_quality",
+        "enum": [
+          "high_quality",
+          "balanced",
+          "size_optimized",
+          "dynamic"
+        ]
+      }
+    },
+    "h264_profiles": {
       "type": "string",
+      "default": "main",
+      "enum": [
+        "baseline",
+        "main",
+        "high",
+        "high 10",
+        "high 4:2:2"
+      ]
+    },
+    "h265_profiles": {
+      "type": "string",
+      "default": "main",
+      "enum": [
+        "main",
+        "high",
+        "high 4:2:2",
+        "high 4:4:4"
+      ]
+    },
+    "av1_profiles": {
+      "type": "string",
+      "default": "main",
       "enum": [
         "main",
         "high",
         "professional"
       ]
     },
+    "codec_settings": {
+      "h264": {
+        "$ref": "#/$defs/h264_settings"
+      },
+      "h265": {
+        "$ref": "#/$defs/h265_settings"
+      },
+      "av1": {
+        "$ref": "#/$defs/av1_settings"
+      }
+    },
     "video_bitrate": {
       "type": "integer",
-      "description": "Units are commonly kbps",
+      "description": "Units are kbps",
+      "default": 25000,
       "minimum": 250,
       "maximum": 500000
     },
-    "video_rate_control": {
-      "type": "string",
-      "enum": [
-        "cbcr",
-        "vbr",
-        "cbr"
-      ]
-    },
     "deinterlacing": {
       "type": "string",
+      "default": "motion_adaptive",
       "enum": [
         "none",
         "weave",
@@ -660,47 +681,24 @@
       ]
     },
     "qp_settings": {
-      "type": "object",
-      "properties": {
-        "qp_mode": {
-          "type": "string",
-          "enum": [
-            "CQP",
-            "AQ",
-            "QVBR"
-          ]
-        },
-        "qp_min": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 51
-        },
-        "qp_max": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 51
-        }
-      },
-      "required": [
-        "qp_mode",
-        "qp_min",
-        "qp_max"
-      ],
-      "additionalProperties": false
+      "type": "string",
+      "default": "high_quality",
+      "enum": [
+        "high_quality",
+        "balanced",
+        "size_optimized"
+      ]
     },
     "gop_size": {
       "type": "integer",
-      "enum": [
-        15,
-        30,
-        60,
-        90,
-        120,
-        240
-      ]
+      "description": "Units are seconds",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 6
     },
     "metadata": {
       "type": "string",
+      "default": "none",
       "enum": [
         "none",
         "cea708",
@@ -713,6 +711,7 @@
     },
     "timecode_insertion": {
       "type": "string",
+      "default": "none",
       "enum": [
         "none",
         "auto"

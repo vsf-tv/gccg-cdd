@@ -23,7 +23,8 @@ from custom_exceptions import (
     PairingServiceRequestTimeoutError,
     PairingServiceResponseError,
 )
-from service_api_models import HostSettings, PairResponse, AuthResponse
+from custom_logger import logger
+from service_api_models import HostSettings, PairRequest, PairResponse, AuthRequest, AuthResponse
 
 MAX_TIMEOUT_SEC = 5
 
@@ -66,8 +67,8 @@ class Pairing(object):
 
         now = int(time.time())
         diff = now - self.start_time
-        print(f"Time now {now}. Started at: {self.start_time}. In {diff} seconds.")
         if diff > self.pair_response.host_settings.pairing_timeout_seconds:
+            logger.info(f"Pairing Expired.")
             return True
         return False
 
@@ -104,17 +105,18 @@ class Pairing(object):
         """
         try:
             self.certs.generate_keys_and_csr()
+            # Host Service API model for a pair request.
+            pair_request: PairRequest = PairRequest(
+                device_type=self.device_type,
+                host_id=self.host_id,
+                csr=self.certs.csr,
+            )
             with requests.post(
                     self.pairing_url,
-                    json={
-                        "device_type": self.device_type,
-                        "host_id": self.host_id,
-                        "public_key": self.certs.pub_key,
-                        "csr": self.certs.csr,
-                    },
+                    json=cattr.unstructure(pair_request),
                     timeout=MAX_TIMEOUT_SEC,
             ) as response:
-                print(f"Pairing response: {response.text}")
+                logger.info(f"Pairing response: {response.text}")
                 response_json = json.loads(response.text)
 
         except requests.HTTPError as e:
@@ -169,13 +171,15 @@ class Pairing(object):
 
         # Call the Host Service Auth API.
         try:
+            # Host Service API auth request model.
+            auth_request: AuthRequest = AuthRequest(
+                device_id=self.pair_response.device_id,
+                pairing_code=self.pair_response.pairing_code,
+                access_code=self.pair_response.access_code,
+            )
             with requests.post(
                     self.auth_url,
-                    json={
-                        "device_id": self.pair_response.device_id,
-                        "pairing_code": self.pair_response.pairing_code,
-                        "access_code": self.pair_response.access_code
-                    },
+                    json=cattr.unstructure(auth_request),
                     timeout=MAX_TIMEOUT_SEC,
             ) as response:
                 response_json = json.loads(response.text)
@@ -203,11 +207,11 @@ class Pairing(object):
         if self.auth_response.status == "STANDBY":
             # OK the API responded with something valid.
             # Auth on the pairing code not complete or pairing/access codes are expired, never existed.
-            print(f"Waiting for Authorization on: {self.pair_response.pairing_code}")
+            logger.info(f"Waiting for Authorization on: {self.pair_response.pairing_code}")
             return False
 
         elif self.auth_response.status == "CLAIMED":
-            print("Authenticated!")
+            logger.info("Authenticated!")
             try:
                 self.certs.write_to_filesystem(
                     pair_response=self.pair_response,
