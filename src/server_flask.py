@@ -18,6 +18,7 @@ from discovery_sdk import CddSdk
 import argparse
 import signal
 import sys
+from custom_logger import logger
 
 
 class CddSdkManager:
@@ -44,7 +45,7 @@ class CddSdkManager:
     _instance: Optional["CddSdkManager"] = None
     _DSDK_client = None
 
-    def __init__(self, certs_path: str, device_local_id: str, schema_file: str, device_type: str):
+    def __init__(self, certs_path: str, device_local_id: str, schema_file: str, device_type: str, log_path: str):
         # If the SDK fails to load because the paths or schema file are bad, then an Exception will
         # be thrown here. These are indeed fatal errors and the application should not continue.
 
@@ -53,7 +54,8 @@ class CddSdkManager:
                 certs_path=certs_path,
                 device_local_id=device_local_id,
                 schema_file=schema_file,
-                device_type=device_type
+                device_type=device_type,
+                log_path=log_path,
             )
             CddSdkManager._instance = self
 
@@ -68,13 +70,14 @@ class CddSdkManager:
 
 
 class APIServer:
-    def __init__(self, certs_path: str, device_local_id: str, schema_file: str, device_type: str):
+    def __init__(self, certs_path: str, device_local_id: str, schema_file: str, device_type: str, log_path: str):
         self.app = Flask(__name__)
         self.sdk_manager = CddSdkManager(
             certs_path=certs_path,
             device_local_id=device_local_id,
             schema_file=schema_file,
-            device_type=device_type
+            device_type=device_type,
+            log_path=log_path,
         )
         self.setup_routes()
 
@@ -112,10 +115,9 @@ class APIServer:
         @self.app.route("/report_status", methods=["POST"])
         def report_status():
             payload = request.get_json()
-            print(f"Got status payload.")
             return jsonify(
                 self.sdk_manager.get_client()
-                .report_status(status_payload=payload)
+                .report_status(instance_schema_compliant_payload=payload)
                 .to_dict()
             )
 
@@ -123,12 +125,10 @@ class APIServer:
         def get_configuration():
             return jsonify(self.sdk_manager.get_client().get_configuration().to_dict())
 
-
         @self.app.route("/deprovision", methods=["POST"])
         def deprovision():
             payload = request.get_json()
             force = payload.get("force", False)
-            print(f"Force:", force)
             return jsonify(self.sdk_manager.get_client().deprovision(force=force).to_dict())
 
     def run(self, host: str, port: int):
@@ -151,7 +151,7 @@ def ensure_single_instance():
         # Keep the file pointer reference so the lock remains.
         return fp
     except IOError:
-        print("Another instance is already running")
+        logger.error("Another instance is already running")
         raise ProcessAlreadyRunningError("Another instance is already running")
 
 
@@ -159,6 +159,7 @@ def main(device_local_id: str,
          certs_path: str,
          schema_file: str,
          tmp_path: str,
+         log_path: str,
          ip: str,
          port: int,
          device_type: str):
@@ -167,11 +168,12 @@ def main(device_local_id: str,
         certs_path=certs_path,
         device_local_id=device_local_id,
         schema_file=schema_file,
-        device_type=device_type
+        device_type=device_type,
+        log_path=log_path
     )
 
     def handle_exit(signum, frame):
-        server.sdk_manager.get_client().disconnect()
+        server.sdk_manager.get_client().shutdown()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, handle_exit)
@@ -215,6 +217,12 @@ if __name__ == "__main__":
         help="Enter a writable path for temporary storage",
     )
     parser.add_argument(
+        "--log_path",
+        required=True,
+        type=str,
+        help="Enter a writable path for log storage",
+    )
+    parser.add_argument(
         "--ip",
         required=True,
         type=str,
@@ -242,6 +250,7 @@ if __name__ == "__main__":
         certs_path=args.certs_path,
         schema_file=args.schema_path,
         tmp_path=args.tmp_path,
+        log_path=args.log_path,
         ip=args.ip,
         port=args.port,
         device_type=args.device_type

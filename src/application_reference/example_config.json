@@ -2,8 +2,7 @@
   "configuration": {
     "channels": [
       {
-        "id": "Channel1",
-        "state": "ACTIVE",
+        "state": "IDLE",
         "source": "SDI-1",
         "output_configuration": {
           "srt": {

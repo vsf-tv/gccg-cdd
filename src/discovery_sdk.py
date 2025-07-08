@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import base64
 import cattr
 import time
 import json
 from jsonschema import validate
 import paho.mqtt.client as mqtt
+from paho.mqtt.client import MQTT_LOG_ERR, MQTT_LOG_WARNING, MQTT_LOG_DEBUG
 from threading import Lock
 from typing import Optional
 from credentialstore import CredentialStore
@@ -32,9 +34,10 @@ from custom_exceptions import (
     CertificatesRotationError,
     InvalidThumbnailSubscription,
     DeprovisionError,
-    SSLSetupError
+    SSLSetupError,
+    InvalidLogsSubscription
 )
-
+from custom_logger import logger, CDDLogHandler
 from pairing import Pairing
 from models import (
     States,
@@ -45,7 +48,9 @@ from models import (
     GetConfigurationResponse,
     DeprovisionResponse
 )
-from service_api_models import DeprovisionMessage
+from service_api_models import DeprovisionMessage, CertRotate, Telemetry, LogRequest, ReportMessage
+from utils import upload_file
+
 from utils import (
     PublishThrottle,
     publish_message,
@@ -84,16 +89,31 @@ class CddSdk(object):
     """
 
     def __init__(
-        self, certs_path: str, device_local_id: str, schema_file: str, device_type: str
+        self,
+        certs_path: str,
+        device_local_id: str,
+        schema_file: str,
+        device_type: str,
+        log_path: str,
     ):
 
         self.certs_path: str = certs_path
         self.device_local_id: str = device_local_id
         self.schema_file: str = schema_file
         self.device_type = device_type
+        self._log_request = LogRequest()
 
         # Additional params and classes needed by the SDK.
-        self.certs: Optional[CredentialStore] = None
+        self.certs: CredentialStore = CredentialStore(
+            self.certs_path, self.device_local_id, host_id="undefined"
+        )
+        self.logger = CDDLogHandler(
+            call_back_function=self._report_logs,
+            device_id="unk",
+            log_path=log_path
+        )
+        self._processing_log_put = False  # Failsafe: simply drop sending logs if logs are spewing.
+        self._log_spew_detected: int = 0
         self.host_config: Optional[HostConfig] = None
         self.mqtt_client: Optional[mqtt.Client] = None
         self.online_checker: Optional[OnlineChecker] = OnlineChecker([])
@@ -117,7 +137,18 @@ class CddSdk(object):
             raise SystemIntegrationError(
                 details=f"Failed to load schema file from device: {self.schema}"
             )
+        self.telemetry = Telemetry()
         self._reset()
+
+    def shutdown(self):
+        """
+        Rapidly stops all threads and disconnects from the cloud service in preparation for shutdown
+        """
+        self.thumbnail_manager.stop_all()
+        self.online_checker.stop()
+        if self.mqtt_client:
+            self.mqtt_client.disconnect()  # inform the service gracefully
+            self.mqtt_client.loop_stop()
 
     def _reset(self):
         """
@@ -129,12 +160,12 @@ class CddSdk(object):
         self.configuration = Configuration()
         self._schema_delivered = False
         self._transition(States.DISCONNECTED)
-        if self.online_checker:
-            self.online_checker.stop()
+        self.thumbnail_manager.stop_all()
         if self.mqtt_client:
             self.mqtt_client.disconnect()
             self.mqtt_client.loop_stop()
         self.mqtt_client = None
+        self.telemetry = Telemetry()
 
     def _initialize_host(self, host_id):
         """
@@ -180,6 +211,7 @@ class CddSdk(object):
         """
         # Only Connect and Disconnect must run synchronously since state conflicts can arise.
         with self.api_lock:
+            logger.info("Connect")
             try:
                 if not self.host_id or self.host_id != host_id:
                     # Specifying a new/changed host. Ensure we disconnect and reconnect to the new one.
@@ -188,7 +220,7 @@ class CddSdk(object):
 
                 if self._is(States.CONNECTING):
                     # A connection is underway, nothing to do but wait for it.
-                    print(self.state)
+                    logger.info(self.state)
                     return ConnectResponse(
                         success=True,
                         state=self.state,
@@ -197,29 +229,29 @@ class CddSdk(object):
                     )
 
                 if self._is(States.CONNECTED):
-                    print(self.state)
+                    logger.info(self.state)
                     return ConnectResponse(
                         success=True,
                         state=self.state,
                         message="Connected",
-                        device_id=self.certs.device_id,
-                        region=self.certs.region,
+                        device_id=self.certs.get_device_id(),
+                        region=self.certs.get_region(),
                         online_state=self.online_checker.get_online_state()
                     )
 
                 if self._is(States.RECONNECTING):
-                    print(self.state)
+                    logger.info(self.state)
                     return ConnectResponse(
                         success=True,
                         state=self.state,
                         message="Reconnecting...",
-                        device_id=self.certs.device_id,
-                        region=self.certs.region,
+                        device_id=self.certs.get_device_id(),
+                        region=self.certs.get_region(),
                         online_state=self.online_checker.get_online_state()
                     )
 
                 if self._is(States.PAIRING):
-                    print(self.state)
+                    logger.info(self.state)
                     if self._load_certs():
                         return (
                             self._start_connect()
@@ -265,7 +297,7 @@ class CddSdk(object):
                     )
 
                 if self._is(States.DISCONNECTED):
-                    print(self.state)
+                    logger.info(self.state)
                     # device has been claimed and authentication succeeded. Connect now.
                     if self._load_certs():
                         # Reset the throttle to service-settings expectations.
@@ -278,7 +310,7 @@ class CddSdk(object):
                     # then next time _load_certs() == TRUE.
                     self.pairing.get_new_pairing_code()
                     self._transition(States.PAIRING)
-                    print(self.state)
+                    logger.info(self.state)
                     # will either get a code or throw exception.
 
                     return ConnectResponse(
@@ -294,17 +326,18 @@ class CddSdk(object):
                 return ConnectResponse(
                     success=False,
                     state=self.state,
-                    message=f"Error in connect() {e}",
+                    message=f"Error in connect() {str(e)}",
                     exception=e,
                     online_state=self.online_checker.get_online_state()
                 )
 
     def get_connection_status(self) -> ConnectResponse:
+        logger.info("Get Connection Status")
         if self.state in [States.CONNECTED, States.RECONNECTING] and self.certs:
             return ConnectResponse(success=True,
                                    state=self.state,
                                    message="",
-                                   region=self.certs.region,
+                                   region=self.certs.get_region(),
                                    online_state=self.online_checker.get_online_state()
                                    )
 
@@ -330,16 +363,17 @@ class CddSdk(object):
         """
         # APIs requests should not be called asynchronously.
         with self.api_lock:
+            logger.info("Disconnect")
             try:
                 # Stops the underlying MQTT Thread. Results in an async _on_disconnect() call.
-                print("DISCONNECTING")
+                logger.info("DISCONNECTING")
                 self._reset()
                 return DisconnectResponse(
                     success=True, state=States.DISCONNECTED, message="Disconnected"
                 )
 
             except Exception as e:
-                print(f"Error in disconnect: {e}")
+                logger.info(f"Error in disconnect: {e}")
                 return DisconnectResponse(
                     success=False,
                     state=self.state,
@@ -360,6 +394,7 @@ class CddSdk(object):
         """
         # APIs requests should not be called asynchronously.
         with self.api_lock:
+            logger.info("Deprovision")
             try:
                 if self.state not in [States.CONNECTED, States.CONNECTING] and not force:
                     return DeprovisionResponse(
@@ -392,7 +427,7 @@ class CddSdk(object):
                     )
                     time.sleep(1)  # Let the message be sent, plenty of time.
                 else:
-                    print("Deprovisioning while DISCONNECTED:  Service not informed the device is now unavailable.")
+                    logger.info("Deprovisioning while DISCONNECTED:  Service will not be informed.")
 
                 self.certs.deprovision()
                 self._reset()
@@ -428,12 +463,15 @@ class CddSdk(object):
         """
         # APIs requests should not be called asynchronously.
         with self.api_lock:
+            logger.info("Get Configuration")
             try:
                 if self.configuration.callback_error:
                     raise InvalidConfigurationError()
 
                 # Configuration is locally cached. If the network is down for a moment, can still get latest
                 # if the client so desires.
+                logger.info(f"Passing updated configuration_id: {self.configuration.update_id} to client.")
+                self.telemetry.passed_config_id = self.configuration.update_id
                 return GetConfigurationResponse(
                     success=True,
                     state=self.state,
@@ -442,6 +480,7 @@ class CddSdk(object):
                 )
 
             except Exception as e:
+                self.telemetry.passed_config_id = self.configuration.update_id
                 return GetConfigurationResponse(
                     success=False,
                     state=self.state,
@@ -450,9 +489,10 @@ class CddSdk(object):
                     exception=e,
                 )
 
-    def report_status(self, status_payload: dict) -> ReportStatusResponse:
+    def report_status(self, instance_schema_compliant_payload: dict) -> ReportStatusResponse:
         """
-        Report status to the host service:
+        Report instance_schema_compliant_payload to the host service:
+            status and (current) configuration
         Publishing is internally rate limited (See Throttle).
         Service will handle throttling enforcement by disconnecting or revoking the device if this is a problem.
 
@@ -469,6 +509,7 @@ class CddSdk(object):
         """
         # APIs requests should not be called asynchronously.
         with self.api_lock:
+            logger.info("Report Status")
             try:
                 if not self._is(States.CONNECTED):
                     return ReportStatusResponse(
@@ -481,7 +522,7 @@ class CddSdk(object):
                     )
 
                 if not self.throttle.can_publish():
-                    print("ReportStatus throttled")
+                    logger.info("ReportStatus throttled")
                     return ReportStatusResponse(
                         success=False,
                         state=self.state,
@@ -489,14 +530,23 @@ class CddSdk(object):
                         exception=ClientAPIThrottle(details="Request: report_status"),
                     )
 
-                print("Validating status payload")
                 try:
-                    str_payload = json.dumps(status_payload)
-                    validate(schema=self.schema, instance=status_payload)
+                    validate(schema=self.schema, instance=instance_schema_compliant_payload)
+                    self.telemetry.reported_message_valid = True
                 except Exception as e:
                     # This result will eventually feed into SDK Telemetry (WIP). Here the
                     # service will be informed about the error condition.
-                    print(f"Invalid status payload: {e}")
+                    try:
+                        # Report the failure to the service.
+                        logger.exception(f"Invalid status payload: {e}")
+                        self.telemetry.reported_message_valid = False
+                        status_message: ReportMessage = ReportMessage(cattr.unstructure(self.telemetry), {})
+                        self._do_publish_status_message(status_message)
+                    except Exception as e:
+                        # Returning InvalidStatusMessageError even if publish fails here since the invalid status
+                        # message is the high order bit.  Possibly exceptions can be a list?
+                        logger.exception(f"Can't publish status. Msg: {e}")
+
                     return ReportStatusResponse(
                         success=False,
                         state=self.state,
@@ -507,34 +557,14 @@ class CddSdk(object):
                 # QOS: 0 is best effort is sufficient for status messages that have a limited
                 # value over time and need not be queued, accumulated and resent at a later time.
                 try:
-
-                    # Publish schema is attempted immediately on on_connect() callback.
-                    # If that failed, we can try again here and if it fails again we can inform the client.
-                    if not self._schema_delivered:
-                        print("Attempting to re-publish schema")
-                        self._report_schema()
-                    try:
-
-                        # This should never happen since the state must be CONNECTED.
-                        topics = self.certs.get_topics()
-                        if not topics or not self.mqtt_client:
-                            raise ReportStatusError(
-                                details="Skipping publish while not CONNECTED"
-                            )
-
-                        publish_message(
-                            client=self.mqtt_client,
-                            topic=topics.report_status,
-                            payload=str_payload,
-                            qos=0,
-                            retain=False,
-                        )
-                        print("Status delivered")
-                    except Exception as e:
-                        raise ReportStatusError(details=str(e)) from e
+                    status_message: ReportMessage = ReportMessage(
+                        telemetry=self.telemetry,
+                        message=instance_schema_compliant_payload
+                    )
+                    self._do_publish_status_message(status_message)
 
                 except Exception as e:
-                    print(f"Can't publish status. Msg: {e}")
+                    logger.exception(f"Can't publish status. Msg: {e}")
                     return ReportStatusResponse(
                         success=False,
                         state=self.state,
@@ -549,7 +579,7 @@ class CddSdk(object):
             except Exception as e:
                 # This result will eventually feed into SDK Telemetry (WIP). Here the
                 # service will be informed about the error condition.
-                print(f"Error in report_status: {e}")
+                logger.exception(f"Error in report_status: {e}")
                 return ReportStatusResponse(
                     success=False,
                     state=self.state,
@@ -557,7 +587,31 @@ class CddSdk(object):
                     exception=e,
                 )
 
+    #
     # PRIVATE METHODS ---------------------------------------------------
+    #
+    def _do_publish_status_message(self, status_message: ReportMessage):
+
+        # Publish schema is attempted immediately on on_connect() callback.
+        # If that failed, we can try again here and if it fails again we can inform the client.
+        if not self._schema_delivered:
+            logger.info("Attempting to re-publish schema")
+            self._report_schema()
+
+        # This should never happen since the state must be CONNECTED.
+        topics = self.certs.get_topics()
+        if not topics or not self.mqtt_client:
+            raise ReportStatusError(
+                details="Skipping publish while not CONNECTED"
+            )
+
+        publish_message(
+            client=self.mqtt_client,
+            topic=topics.report_status,
+            payload=json.dumps(cattr.unstructure(status_message)),
+            qos=0,
+            retain=False,
+        )
 
     # ACK: The callback for when the client receives a CONNACK response from the server.
     def _on_connect(self, client, userdata, flags, reason_code):
@@ -574,7 +628,7 @@ class CddSdk(object):
                            mqtt client _on_connect and _on_disconnect callbacks try to keep up.
                            Either way, that condition is handled.
         """
-        print(f"OnConnect Callback")
+        logger.info(f"OnConnect Callback")
         if reason_code in [mqtt.MQTT_ERR_NO_CONN, mqtt.MQTT_ERR_NO_CONN]:
             raise ConnectError(
                 details=f"Credentials were refused or revoked. Deregister and re-pair"
@@ -585,7 +639,7 @@ class CddSdk(object):
                 details=f"Connection failed with result code {reason_code}"
             )
 
-        print("ON CONNECT CALLBACK: code " + str(reason_code))
+        logger.info("ON CONNECT CALLBACK: code " + str(reason_code))
         self._transition(States.CONNECTED)
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
@@ -631,6 +685,15 @@ class CddSdk(object):
         except Exception as e:
             raise ConnectError(details=f"Client is unable to subscribe to: {topics.deprovision_inform_client}.")
 
+        try:
+            self.mqtt_client.subscribe(topic=topics.update_log)
+            self.mqtt_client.message_callback_add(
+                sub=topics.update_log,
+                callback=self._update_log_subscription_callback,
+            )
+        except Exception as e:
+            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_log}.")
+
         self._report_schema()  # Service will ignore all but the first schema reported by this device_id.
         self._schema_delivered = True
 
@@ -653,7 +716,14 @@ class CddSdk(object):
 
     @staticmethod
     def _on_log(client, userdata, level, buf):
-        print(f"MQTT Log: {level}: {buf}")
+        if level == MQTT_LOG_ERR:
+            logger.error(f"MQTT Log: {level}: {buf}")
+        elif level == MQTT_LOG_WARNING:
+            logger.warning(f"MQTT Log: {level}: {buf}")
+        elif level == MQTT_LOG_DEBUG:
+            logger.debug(f"MQTT Log: {level}: {buf}")
+        else:
+            logger.info(f"MQTT Log: {level}: {buf}")
 
     def _start_connect(self) -> ConnectResponse:
         """
@@ -668,8 +738,8 @@ class CddSdk(object):
                 success=True,
                 state=self.state,
                 message="Already connected or automatically re-connecting",
-                device_id=self.certs.device_id,
-                region=self.certs.region,
+                device_id=self.certs.get_device_id(),
+                region=self.certs.get_region(),
                 online_state=self.online_checker.get_online_state()
             )
 
@@ -684,7 +754,7 @@ class CddSdk(object):
             # State will remain CONNECTING until on_connect() callback-> CONNECTED or an exception here -> DISCONNECTED
             self._transition(States.CONNECTING)
             self.mqtt_client = mqtt.Client(
-                client_id=self.certs.device_id,
+                client_id=self.certs.get_device_id(),
                 clean_session=True,
                 userdata=None,
                 transport="tcp",
@@ -710,13 +780,13 @@ class CddSdk(object):
                 success=True,
                 state=self.state,
                 message="Connection started",
-                region=self.certs.region,
+                region=self.certs.get_region(),
                 online_state=self.online_checker.get_online_state(),
-                device_id=self.certs.device_id,
+                device_id=self.certs.get_device_id(),
             )
 
         except Exception as e:
-            print(f"Error in _start_connect: {e}")
+            logger.exception(f"Error in _start_connect: {e}")
             self._reset()  # transitions to DISCONNECTED
 
             # This is likely the most common error/exception encountered by the host application
@@ -741,24 +811,20 @@ class CddSdk(object):
                 private_key=self.certs.priv_key_file,
                 iot_protocol_name=self.certs.host_settings.iot_protocol_name,
             )
-            # print(f"Open ssl version:{format(ssl.OPENSSL_VERSION)}")
-            # ssl_context = ssl.create_default_context()
-            # ssl_context.set_alpn_protocols([self.certs.host_settings.iot_protocol_name])
-            # ssl_context.load_verify_locations(cafile=self.certs.ca_cert_file)
-            # ssl_context.load_cert_chain(certfile=self.certs.device_cert_file, keyfile=self.certs.priv_key_file)
         except Exception as e:
-            print(f"Failed to setup SSL. Msg:{e}")
+            logger.exception(f"Failed to setup SSL. Msg:{e}")
             raise SSLSetupError(f"Msg:{e}")
 
         self.mqtt_client.tls_set_context(context=ssl_context)
-        print(f"Connecting to: {self.certs.uri}")
+        logger.info(f"Connecting to: {self.certs.get_uri()}")
 
         # Port 443 enables MQTT over HTTPs and transparency in most network environments.
-        self.mqtt_client.connect(
-                host=self.certs.uri,
+        result = self.mqtt_client.connect(
+                host=self.certs.get_uri(),
                 port=443,
                 keepalive=self.certs.host_settings.mqtt_keepalive_seconds,
         )
+        logger.info(f"!!!!!!!!!!!!!!!!!!!!!  connect result: {result}")
 
     def _load_certs(self):
         return self.certs.read_from_filesystem()
@@ -785,9 +851,11 @@ class CddSdk(object):
 
         try:
             validate(schema=self.schema, instance=config)
-            print("Got a valid update config")
+            logger.info("Got a valid update config")
             # Increments the update_id and saves the payload.
             self.configuration.update_configuration(payload=config)
+            self.telemetry.received_message_valid = True
+            self.telemetry.received_config_id = self.configuration.update_id
         except Exception as e:
             # Validation failure here can only happen if the service failed to validate.
             # Regardless, the SDK will perform its own validation here.
@@ -795,6 +863,7 @@ class CddSdk(object):
             # This is an asynchronous callback.
             # Persist the error in the Configuration class to inform the next get_configuration() Response.
             self.configuration.update_configuration(callback_error=True)
+            self.telemetry.received_message_valid = False
             raise InvalidConfigurationError(details=f"Schema Validation Error: {e}")
 
     def _update_certs_callback(self, client, userdata, message):
@@ -803,6 +872,9 @@ class CddSdk(object):
         persistent topic. An update here means the service just updated the credentials payload (or the client just
         connected).  If different from the current device_cert, the client must immediately replace the device_cert,
         disconnect and reconnect.
+
+        * Do not call this function from any function with a lock as this calls disconnect() and connect() both
+        of which have locks.
 
         Args:
              client, userdata: unused metadata supplied by the mqtt client.
@@ -813,33 +885,27 @@ class CddSdk(object):
 
         """
         try:
-            device_cert_pem_str = message.payload.decode("utf-8")
-            assert device_cert_pem_str, "Empty cert provided by rotation."
-            assert device_cert_pem_str.startswith(
-                "-----BEGIN CERTIFICATE-----"
-            ), "Invalid cert provided by rotation."
+            payload = json.loads(message.payload.decode("utf-8"))
+            certs_rotate: CertRotate = cattr.structure(payload, CertRotate)
+            logger.info(f"Got updated credentials rotate message.")
         except Exception as e:
             raise CertificatesRotationError(details="Msg: {e}.")
 
         try:
-            with open(self.certs.device_cert_file, "r") as file:
-                current_cert_pem_str = file.read()
-                if device_cert_pem_str == current_cert_pem_str:
-                    print("No change in device cert.")
-                    return
-                print("Updating device credentials")
-
-                # Replace the device cert and disconnect/reconnect.
-                self.certs.update_device_cert_file(device_cert_pem_str)
+            # Replace the device cert and disconnect/reconnect ONLY if changed.
+            # Persistent cert message will be handled on a new message or on_connect
+            if self.certs.rotate_certs(certs_rotate):
                 host_id = self.host_id
                 # Caller may see DISCONNECTED/CONNECTING while this processes...may take a few seconds.
-                print(f"Momentarily reconnecting using new credentials.")
+                logger.info(f"Momentarily reconnecting using new credentials.")
                 self.disconnect()
                 time.sleep(1)
                 self.connect(host_id)
+            else:
+                logger.info(f"Device cert not changed.  No action taken.")
 
         except Exception as e:
-            raise CertificatesRotationError(details="Msg: {e}.")
+            raise CertificatesRotationError(details=f"Msg: {e}.")
 
     def _update_thumbnail_subscription_callback(self, client, userdata, message):
         """
@@ -857,12 +923,11 @@ class CddSdk(object):
             Persists any error validating the Thumbnail, and if found are included in the above Response.
         """
         try:
-            print(f"Got a new thumbnail subscription request.")
             tn_json = json.loads(message.payload.decode("utf-8"))
+            logger.info(f"Got a new thumbnail subscription request: {tn_json}")
             self.thumbnail_manager.update_thumbnail(tn_json)
         except json.JSONDecodeError as e:
             raise InvalidThumbnailSubscription(details=f"Thumbnail subscription: Could not parse.  Msg: {e}") from e
-
 
     def _report_schema(self):
         """
@@ -873,7 +938,7 @@ class CddSdk(object):
             ReportSchemaError
         """
         if not self._is(States.CONNECTED):
-            print("Can't report schema when not connected")
+            logger.info("Can't report schema when not connected")
             raise ReportSchemaError(details="Can't report schema when not connected")
 
         # TODO:  Need to check the scoped schema against the protocol schema to ensure it is a
@@ -891,7 +956,7 @@ class CddSdk(object):
 
         # QOS:1 at least once to ensure delivery for CONNECTED state since the schema must be available
         # to the service.
-        print("Reporting Schema")
+        logger.info("Reporting Schema")
         try:
             publish_message(
                 client=self.mqtt_client,
@@ -905,7 +970,7 @@ class CddSdk(object):
 
         # Informs the class this has been done and need not be re-sent.
         self._schema_delivered = True
-        print("Schema delivered")
+        logger.info("Schema delivered")
 
     def _is(self, state):
         # Differentiating CONNECTED from RECONNECTING is important to the client,
@@ -915,7 +980,11 @@ class CddSdk(object):
         return self.state == state
 
     def _transition(self, state):
-        print(f"Setting state to {state}")
+        if state in [States.CONNECTED, States.CONNECTING]:
+            self.logger.update_device_id(self.certs.get_device_id())
+        if state in [States.DISCONNECTED]:
+            self.logger.dump()  # Push logs on initial connect and right after disconnecting.
+        logger.info(f"Setting state to {state}")
         self.state = state
 
     def _deprovision_device_callback(self, client, userdata, message):
@@ -929,7 +998,58 @@ class CddSdk(object):
             raise DeprovisionError(details=f"Could not parse deprovision payload: {message}.  Msg: {e}") from e
         try:
             deprovision_message: DeprovisionMessage = cattr.structure(message_json, DeprovisionMessage)
-            print(f"Service deprovisinoed client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
+            logger.info(f"Service deprovisinoed client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
             self._reset()
         except Exception as e:
             raise DeprovisionError(details=f"Could not parse deprovision model: {message_json}.  Msg: {e}") from e
+
+    def _update_log_subscription_callback(self, client, userdata, message):
+        """
+        Called asynchronously in response to a new message received on the
+        host_settings.sub_update_log_subscription_topic persistent topic.
+        An update here means the service just updated the log subscription payload (or the client just connected).
+        The service expects the client to handle an updated log subscription right away when the client is connected.
+
+        Args:
+             client, userdata: unused metadata supplied by the mqtt client.
+             message: JSON log subscription payload from the service.
+
+        Side Effect:
+            Persist log subscription for subsequent Response to client get_log_subscription() requests.
+            Persists any error validating the log subscription, and if found are included in the above Response.
+        """
+        try:
+            self._log_request = cattr.structure(json.loads(message.payload.decode("utf-8")), LogRequest)
+            # Updated Request?
+            logger.info(f"Got new log request.")
+            self.logger.dump()  # Immediately send the latest, we either just connected or a new request came.
+        except json.JSONDecodeError as e:
+            raise InvalidLogsSubscription(details=f"Log subscription: Could not parse.  Msg: {e}") from e
+
+    def _report_logs(self, log_file_path: str):
+        if self._processing_log_put:
+            # If we're still processing the last logs due to log spewing, don't accumulate more.
+            # Uploading a file should never take longer than the rotate interval unless something bad is happening.
+            # If this happens, just drop this batch of logs, which is better than unconstrained mem growth or
+            # blocking. The most likely scenario is a backed up PUT (endpoint is offline) combined with some kind of
+            # unknown failure mode where logs are spewing. The worst case is that the logs not sent.
+            self._log_spew_detected = int(time.time())
+            return
+
+        self._processing_log_put = True
+        try:
+            if self._log_spew_detected:
+                # This message of course will of course be sent in the next batch of logs messages.
+                logger.error(f"Log spew detected.  Last log spew detected at {self._log_spew_detected}.")
+                self._log_spew_detected = 0
+            if self._log_request.is_valid():
+                logger.info(f"Pushing Logs.")
+                self.telemetry.logs_reported += 1
+                upload_file(log_file_path, self._log_request.remote_path, 5, file_type="log")
+            elif self._log_request.expires < int(time.time()):
+                logger.info(f"Log subscription expired.")
+
+        except Exception as e:
+            logger.exception(f"Can't publish status. Msg: {e}")
+        finally:
+            self._processing_log_put = False

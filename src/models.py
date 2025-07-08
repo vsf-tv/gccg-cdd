@@ -17,6 +17,7 @@ from enum import Enum
 import random
 import string
 from typing import Optional
+from custom_logger import logger
 
 # Simple UUID for the subscribed configuration update ID.
 UPDATE_ID_SIZE = 5
@@ -55,7 +56,8 @@ class Configuration(object):
     payload = {}
     callback_error: bool = False
 
-    def update_configuration(self, payload: dict = {}, callback_error: bool = False):
+    def update_configuration(self, payload: Optional[dict] = None, callback_error: bool = False):
+        payload = payload or {}
         """
         Persists a new payload and updates the update_id.
         Called via the MQTT update call back.
@@ -76,7 +78,7 @@ class Configuration(object):
 
         # Leave the latest good configuration in place.
         if callback_error:
-            print("Recording a configuration update failure")
+            logger.error("Recording a configuration update failure.")
             return
 
         self.sequence += 1
@@ -84,7 +86,7 @@ class Configuration(object):
         self.update_id = f"{base}_{self.sequence}"
         self.payload = payload
 
-        print(f"Updated configuration: {self.payload}")
+        logger.info(f"Received config update. configuration_id: {self.update_id} configuration_payload: {self.payload}")
 
     def to_dict(self) -> dict:
         return {"update_id": self.update_id, "payload": self.payload}
