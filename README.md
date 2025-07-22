@@ -92,7 +92,7 @@ and start, stop streaming.
 ## Instructions
 
 Currently, the VSF Test Endpoint is available at the following URL. This may change or include new endpoints.
-> base_endpoint = https://jy7ae9g8oi.execute-api.us-east-1.amazonaws.com
+> base_endpoint = https://v5v7zhbk3k.execute-api.us-east-1.amazonaws.com/dev
 
 ### Create a cloud user/account.  
 
