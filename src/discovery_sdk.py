@@ -212,115 +212,127 @@ class CddSdk(object):
         # Only Connect and Disconnect must run synchronously since state conflicts can arise.
         with self.api_lock:
             logger.info("Connect")
-            try:
+
+            def initialize_if_needed():
                 if not self.host_id or self.host_id != host_id:
                     # Specifying a new/changed host. Ensure we disconnect and reconnect to the new one.
                     self._reset()
                     self._initialize_host(host_id)
 
-                if self._is(States.CONNECTING):
-                    # A connection is underway, nothing to do but wait for it.
-                    logger.info(self.state)
+            def handle_connecting_state():
+                # A connection is underway, nothing to do but wait for it.
+                return ConnectResponse(
+                    success=True,
+                    state=self.state,
+                    message="Connecting to the service",
+                    online_state=self.online_checker.get_online_state()
+                )
+
+            def handle_connected_state():
+                return ConnectResponse(
+                    success=True,
+                    state=self.state,
+                    message="Connected",
+                    device_id=self.certs.get_device_id(),
+                    region=self.certs.get_region(),
+                    online_state=self.online_checker.get_online_state()
+                )
+
+            def handle_reconnecting_state():
+                return ConnectResponse(
+                    success=True,
+                    state=self.state,
+                    message="Reconnecting...",
+                    device_id=self.certs.get_device_id(),
+                    region=self.certs.get_region(),
+                    online_state=self.online_checker.get_online_state()
+                )
+
+            def handle_pairing_state():
+                if self._load_certs():
+                    return (
+                        self._start_connect()
+                    )  # start_connect() will update state as will any callbacks.
+
+                # Expired?
+                if self.pairing.is_expired():
+                    self._reset()
                     return ConnectResponse(
-                        success=True,
+                        success=False,
                         state=self.state,
-                        message="Connecting to the service",
+                        message="Pairing code expired. Reconnect to get a new one.",
                         online_state=self.online_checker.get_online_state()
                     )
 
-                if self._is(States.CONNECTED):
-                    logger.info(self.state)
-                    return ConnectResponse(
-                        success=True,
-                        state=self.state,
-                        message="Connected",
-                        device_id=self.certs.get_device_id(),
-                        region=self.certs.get_region(),
-                        online_state=self.online_checker.get_online_state()
-                    )
-
-                if self._is(States.RECONNECTING):
-                    logger.info(self.state)
-                    return ConnectResponse(
-                        success=True,
-                        state=self.state,
-                        message="Reconnecting...",
-                        device_id=self.certs.get_device_id(),
-                        region=self.certs.get_region(),
-                        online_state=self.online_checker.get_online_state()
-                    )
-
-                if self._is(States.PAIRING):
-                    logger.info(self.state)
-                    if self._load_certs():
-                        return (
-                            self._start_connect()
-                        )  # start_connect() will update state as will any callbacks.
-
-                    # Expired?
-                    if self.pairing.is_expired():
-                        self._reset()
-                        return ConnectResponse(
-                            success=False,
-                            state=self.state,
-                            message="Pairing code expired. Reconnect to get a new one.",
-                            online_state=self.online_checker.get_online_state()
-                        )
-
-                    # OK Poll again for credentials. Will either save.
-                    if self.pairing.authenticate_pairing_code():
-                        # PAIRING->CONNECTING: Attempt to connect.
-                        if (
+                # OK Poll again for credentials. Will either save.
+                if self.pairing.authenticate_pairing_code():
+                    # PAIRING->CONNECTING: Attempt to connect.
+                    if (
                             self._load_certs()
-                        ):  # Any hard failure will raise an exception.
-                            # Reset the throttle to service-settings expectations.
-                            self.throttle = PublishThrottle(
-                                interval_seconds=self.certs.host_settings.min_interval_pub_seconds
-                            )
-                            return self._start_connect()
-
-                        # Should never happen. Auth was successful: _load_certs() should pass or raise an exception
-                        # Ultimately for this to happen, certs would have to be immediately deleted on obtaining them.
-                        self._reset()
-                        raise PairingError(
-                            "Device was authenticated, but couldn't load certs. Try pairing again."
-                        )
-
-                    # Still PAIRING, waiting to be claimed.
-                    return ConnectResponse(
-                        success=True,
-                        state=self.state,
-                        message="Waiting for device to be claimed",
-                        pairing_code=self.pairing.get_pairing_code(),
-                        expires=self.pairing.expires_in(),
-                        online_state=self.online_checker.get_online_state()
-                    )
-
-                if self._is(States.DISCONNECTED):
-                    logger.info(self.state)
-                    # device has been claimed and authentication succeeded. Connect now.
-                    if self._load_certs():
+                    ):  # Any hard failure will raise an exception.
                         # Reset the throttle to service-settings expectations.
                         self.throttle = PublishThrottle(
                             interval_seconds=self.certs.host_settings.min_interval_pub_seconds
                         )
                         return self._start_connect()
 
-                    # Poll for credentials, write them if found
-                    # then next time _load_certs() == TRUE.
-                    self.pairing.get_new_pairing_code()
-                    self._transition(States.PAIRING)
-                    logger.info(self.state)
-                    # will either get a code or throw exception.
-
-                    return ConnectResponse(
-                        success=True,
-                        state=States.PAIRING,
-                        message="Connecting pending. Waiting for device to be claimed",
-                        pairing_code=self.pairing.get_pairing_code(),
-                        expires=self.pairing.expires_in(),
-                        online_state=self.online_checker.get_online_state()
+                    # Should never happen. Auth was successful: _load_certs() should pass or raise an exception
+                    # Ultimately for this to happen, certs would have to be immediately deleted on obtaining them.
+                    self._reset()
+                    raise PairingError(
+                        "Device was authenticated, but couldn't load certs. Try pairing again."
                     )
+
+                # Still PAIRING, waiting to be claimed.
+                return ConnectResponse(
+                    success=True,
+                    state=self.state,
+                    message="Waiting for device to be claimed",
+                    pairing_code=self.pairing.get_pairing_code(),
+                    expires=self.pairing.expires_in(),
+                    online_state=self.online_checker.get_online_state()
+                )
+
+            def handle_disconnected_state():
+                # device has been claimed and authentication succeeded. Connect now.
+                if self._load_certs():
+                    # Reset the throttle to service-settings expectations.
+                    self.throttle = PublishThrottle(
+                        interval_seconds=self.certs.host_settings.min_interval_pub_seconds
+                    )
+                    return self._start_connect()
+
+                # Poll for credentials, write them if found
+                # then next time _load_certs() == TRUE.
+                self.pairing.get_new_pairing_code()
+                self._transition(States.PAIRING)
+                logger.info(self.state)
+                # will either get a code or throw exception.
+
+                return ConnectResponse(
+                    success=True,
+                    state=States.PAIRING,
+                    message="Connecting pending. Waiting for device to be claimed",
+                    pairing_code=self.pairing.get_pairing_code(),
+                    expires=self.pairing.expires_in(),
+                    online_state=self.online_checker.get_online_state()
+                )
+
+            # State-based dispatch - only one handler called
+            state_handlers = {
+                States.CONNECTING: handle_connecting_state,
+                States.CONNECTED: handle_connected_state,
+                States.RECONNECTING: handle_reconnecting_state,
+                States.PAIRING: handle_pairing_state,
+                States.DISCONNECTED: handle_disconnected_state
+            }
+
+            try:
+                initialize_if_needed()
+                handler = state_handlers.get(self.state)
+                if handler:
+                    logger.info(self.state)
+                    return handler()
 
             except Exception as e:
                 return ConnectResponse(
@@ -333,19 +345,20 @@ class CddSdk(object):
 
     def get_connection_status(self) -> ConnectResponse:
         logger.info("Get Connection Status")
-        if self.state in [States.CONNECTED, States.RECONNECTING] and self.certs:
-            return ConnectResponse(success=True,
-                                   state=self.state,
-                                   message="",
-                                   region=self.certs.get_region(),
-                                   online_state=self.online_checker.get_online_state()
-                                   )
 
-        return ConnectResponse(success=True,
-                               state=self.state,
-                               message="",
-                               online_state=self.online_checker.get_online_state()
-                               )
+        # Only message and region are impacted by state
+        region = None
+        if self.state in [States.CONNECTED, States.RECONNECTING] and self.certs:
+            region = self.certs.get_region()
+
+        return ConnectResponse(
+            success=True,
+            state=self.state,
+            message="",
+            region=region,
+            online_state=self.online_checker.get_online_state()
+        )
+
 
     def disconnect(self) -> DisconnectResponse:
         """
@@ -361,27 +374,31 @@ class CddSdk(object):
         Note:
             This function may construct an exception to inform the Response() but will not raise them unhandled.
         """
-        # APIs requests should not be called asynchronously.
         with self.api_lock:
             logger.info("Disconnect")
-            try:
-                # Stops the underlying MQTT Thread. Results in an async _on_disconnect() call.
+
+            def perform_disconnect():
                 logger.info("DISCONNECTING")
                 self._reset()
-                return DisconnectResponse(
-                    success=True, state=States.DISCONNECTED, message="Disconnected"
-                )
 
+            # Execute chain
+            success, message, exception = True, "Disconnected", None
+
+            try:
+                perform_disconnect()
             except Exception as e:
                 logger.info(f"Error in disconnect: {e}")
-                return DisconnectResponse(
-                    success=False,
-                    state=self.state,
-                    message=f"Error in disconnect: {e}",
-                    exception=e,
-                )
+                success, message, exception = False, f"Error in disconnect: {e}", e
 
-    def deprovision(self, force: bool = False) -> DeprovisionResponse:
+            return DisconnectResponse(
+                success=success,
+                state=States.DISCONNECTED,
+                message=message,
+                exception=exception
+            )
+
+
+    def deprovision(self, host_id: str, force: bool = False) -> DeprovisionResponse:
         """
         Deprovision the device from the host service. Certs/Identify deleted.
         Returns a DisconnectResponse().
@@ -395,15 +412,15 @@ class CddSdk(object):
         # APIs requests should not be called asynchronously.
         with self.api_lock:
             logger.info("Deprovision")
-            try:
-                if self.state not in [States.CONNECTED, States.CONNECTING] and not force:
-                    return DeprovisionResponse(
-                        success=False,
-                        state=self.state,
-                        message="Can only deprovision when CONNECTED or using optional force argument.",
-                    )
 
-                if self.state == States.CONNECTED:
+            # Default success case
+            success = True
+            message = f"Deprovisioned credentials for host: {host_id}"
+            exception = None
+
+            def inform_host_service():
+                # The SDK informs the service when CONNECTED. Service can process the change.
+                if self.host_id == host_id:
                     try:
                         deprovision_message = DeprovisionMessage(
                             reason="Deprovision requested by user",
@@ -426,24 +443,35 @@ class CddSdk(object):
                         retain=False,
                     )
                     time.sleep(1)  # Let the message be sent, plenty of time.
-                else:
-                    logger.info("Deprovisioning while DISCONNECTED:  Service will not be informed.")
 
-                self.certs.deprovision()
+            def delete_credentials():
+                CredentialStore(self.certs_path, self.device_local_id, host_id).deprovision()
                 self._reset()
-                return DeprovisionResponse(
-                    success=True,
-                    state=States.DISCONNECTED,
-                    message="Deprovisioned"
-                )
 
+            try:
+                if self.state not in [States.CONNECTED, States.CONNECTING] and not force:
+                    raise ValueError("Can only deprovision when CONNECTED or using optional force argument.")
+
+                if self.state == States.CONNECTED:
+                    inform_host_service()
+                else:
+                    logger.info(f"Deprovisioning {host_id} while not CONNECTED: Host-Service will not be informed.")
+                delete_credentials()
+
+            except ValueError as e:
+                success = False
+                message = str(e)
             except Exception as e:
-                return DeprovisionResponse(
-                    success=False,
-                    state=self.state,
-                    message=f"Error in Deprovision: {e}",
-                    exception=e,
-                )
+                success = False
+                message = f"Error in Deprovision: {e}"
+                exception = e
+
+            return DeprovisionResponse(
+                success=success,
+                state=States.DISCONNECTED,
+                message=message,
+                exception=exception
+            )
 
     def get_configuration(self) -> GetConfigurationResponse:
         """
@@ -489,7 +517,7 @@ class CddSdk(object):
                     exception=e,
                 )
 
-    def report_status(self, instance_schema_compliant_payload: dict) -> ReportStatusResponse:
+    def report_status(self, payload: dict) -> ReportStatusResponse:
         """
         Report instance_schema_compliant_payload to the host service:
             status and (current) configuration
@@ -510,82 +538,58 @@ class CddSdk(object):
         # APIs requests should not be called asynchronously.
         with self.api_lock:
             logger.info("Report Status")
-            try:
-                if not self._is(States.CONNECTED):
-                    return ReportStatusResponse(
-                        success=False,
-                        state=self.state,
-                        message="Status update not sent",
-                        exception=ReportStatusError(
-                            details="Can only Report Status while CONNECTED"
-                        ),
-                    )
 
+            def check_connected():
+                if not self._is(States.CONNECTED):
+                    raise ReportStatusError("Can only Report Status while CONNECTED")
+
+            def check_throttle():
                 if not self.throttle.can_publish():
                     logger.info("ReportStatus throttled")
-                    return ReportStatusResponse(
-                        success=False,
-                        state=self.state,
-                        message="Throttled: too many requests",
-                        exception=ClientAPIThrottle(details="Request: report_status"),
-                    )
+                    raise ClientAPIThrottle("Request: report_status")
 
+            def validate_and_publish():
                 try:
-                    validate(schema=self.schema, instance=instance_schema_compliant_payload)
+                    validate(schema=self.schema, instance=payload)
                     self.telemetry.reported_message_valid = True
                 except Exception as e:
-                    # This result will eventually feed into SDK Telemetry (WIP). Here the
-                    # service will be informed about the error condition.
+                    # Report failure to service (original behavior)
                     try:
-                        # Report the failure to the service.
                         logger.exception(f"Invalid status payload: {e}")
                         self.telemetry.reported_message_valid = False
-                        status_message: ReportMessage = ReportMessage(cattr.unstructure(self.telemetry), {})
+                        status_message = ReportMessage(cattr.unstructure(self.telemetry), {})
                         self._do_publish_status_message(status_message)
-                    except Exception as e:
-                        # Returning InvalidStatusMessageError even if publish fails here since the invalid status
-                        # message is the high order bit.  Possibly exceptions can be a list?
-                        logger.exception(f"Can't publish status. Msg: {e}")
+                    except Exception as publish_e:
+                        logger.exception(f"Can't publish status. Msg: {publish_e}")
+                    raise InvalidStatusMessageError(str(e))
 
-                    return ReportStatusResponse(
-                        success=False,
-                        state=self.state,
-                        message="Status Send Failed. Schema Validation Failure",
-                        exception=InvalidStatusMessageError(details=str(e)),
-                    )
-
-                # QOS: 0 is best effort is sufficient for status messages that have a limited
-                # value over time and need not be queued, accumulated and resent at a later time.
+                # Publish the actual message
                 try:
-                    status_message: ReportMessage = ReportMessage(
-                        telemetry=self.telemetry,
-                        message=instance_schema_compliant_payload
-                    )
+                    status_message = ReportMessage(telemetry=self.telemetry, message=payload)
                     self._do_publish_status_message(status_message)
-
                 except Exception as e:
                     logger.exception(f"Can't publish status. Msg: {e}")
-                    return ReportStatusResponse(
-                        success=False,
-                        state=self.state,
-                        message="Status update not sent",
-                        exception=e,
-                    )
+                    raise e
 
-                return ReportStatusResponse(
-                    success=True, state=self.state, message="Status update sent"
-                )
+            # Execute chain
+            success, message, exception = True, "Status update sent", None
 
+            try:
+                check_connected()
+                check_throttle()
+                validate_and_publish()
+            except ClientAPIThrottle as e:
+                success, message, exception = False, "Throttled: too many requests", e
+            except ReportStatusError as e:
+                success, message, exception = False, "Status update not sent", e
+            except InvalidStatusMessageError as e:
+                success, message, exception = False, "Status Send Failed. Schema Validation Failure", e
             except Exception as e:
-                # This result will eventually feed into SDK Telemetry (WIP). Here the
-                # service will be informed about the error condition.
                 logger.exception(f"Error in report_status: {e}")
-                return ReportStatusResponse(
-                    success=False,
-                    state=self.state,
-                    message=f"Status update not sent: {e}",
-                    exception=e,
-                )
+                success, message, exception = False, f"Status update not sent: {e}", e
+
+            return ReportStatusResponse(success=success, state=self.state,
+                                        message=message, exception=exception)
 
     #
     # PRIVATE METHODS ---------------------------------------------------
@@ -649,50 +653,19 @@ class CddSdk(object):
         if not topics or not self.mqtt_client:
             raise ConnectError(details="Unable to subscribe while not connected")
 
-        try:
-            self.mqtt_client.subscribe(topic=topics.update_configuration)
-            self.mqtt_client.message_callback_add(
-                sub=topics.update_configuration,
-                callback=self._update_configuration_callback,
-            )
-        except Exception as e:
-            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_configuration}.")
+        def subscribe_to_topic(topic, callback):
+            try:
+                self.mqtt_client.subscribe(topic=topic)
+                self.mqtt_client.message_callback_add(sub=topic, callback=callback)
+            except Exception as e:
+                raise ConnectError(details=f"Client is unable to subscribe to: {topic}.")
 
-        try:
-            self.mqtt_client.subscribe(topic=topics.update_certs)
-            self.mqtt_client.message_callback_add(
-                sub=topics.update_certs,
-                callback=self._update_certs_callback,
-            )
-        except Exception as e:
-            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_certs}.")
-
-        try:
-            self.mqtt_client.subscribe(topic=topics.update_thumbnail)
-            self.mqtt_client.message_callback_add(
-                sub=topics.update_thumbnail,
-                callback=self._update_thumbnail_subscription_callback,
-            )
-        except Exception as e:
-            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_thumbnail}.")
-
-        try:
-            self.mqtt_client.subscribe(topic=topics.deprovision_inform_client)
-            self.mqtt_client.message_callback_add(
-                sub=topics.deprovision_inform_client,
-                callback=self._deprovision_device_callback,
-            )
-        except Exception as e:
-            raise ConnectError(details=f"Client is unable to subscribe to: {topics.deprovision_inform_client}.")
-
-        try:
-            self.mqtt_client.subscribe(topic=topics.update_log)
-            self.mqtt_client.message_callback_add(
-                sub=topics.update_log,
-                callback=self._update_log_subscription_callback,
-            )
-        except Exception as e:
-            raise ConnectError(details=f"Client is unable to subscribe to: {topics.update_log}.")
+        # Subscribe to all required topics
+        subscribe_to_topic(topics.update_configuration, self._update_configuration_callback)
+        subscribe_to_topic(topics.update_certs, self._update_certs_callback)
+        subscribe_to_topic(topics.update_thumbnail, self._update_thumbnail_subscription_callback)
+        subscribe_to_topic(topics.deprovision_inform_client, self._deprovision_device_callback)
+        subscribe_to_topic(topics.update_log, self._update_log_subscription_callback)
 
         self._report_schema()  # Service will ignore all but the first schema reported by this device_id.
         self._schema_delivered = True

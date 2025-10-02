@@ -90,25 +90,8 @@ class Pairing(object):
         )
 
     def get_new_pairing_code(self):
-        """
-        Populates the instance with freshly obtained pairing codes.
-
-        Generates a public/private keypair and certificate signing request (CSR).
-        The service will use the CSR to generate the device cert.
-
-        Args: None
-
-        Returns: None
-
-        Raises:
-           PairingError: When the authentication service returns status_code != 200.
-           PairingServiceConnectionError: (see custom_exceptions)
-           PairingServiceResponseError: (see custom_exceptions)
-
-        """
         try:
             self.certs.generate_keys_and_csr()
-            # Host Service API model for a pair request.
             pair_request: PairRequest = PairRequest(
                 device_type=self.device_type,
                 host_id=self.host_id,
@@ -120,13 +103,20 @@ class Pairing(object):
                     timeout=MAX_TIMEOUT_SEC,
             ) as response:
                 logger.info(f"Pairing response: {response.text}")
+
+                # Check status code first
+                if response.status_code != 200:
+                    raise PairingError(
+                        details=f"StatusCode: {response.status_code} - Response: {response.text}"
+                    )
+
                 response_json = json.loads(response.text)
 
         except requests.HTTPError as e:
-            if 200 != response.status_code:
-                raise PairingError(
-                    details=f"StatusCode: {response.status_code} - Msg: {e}"
-                )
+            # This is now redundant but kept for defensive programming
+            raise PairingError(
+                details=f"HTTP Error - StatusCode: {response.status_code} - Msg: {e}"
+            )
         except requests.ConnectionError as e:
             raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
         except requests.Timeout as e:
@@ -135,6 +125,7 @@ class Pairing(object):
             raise PairingServiceResponseError(details=str(e.msg))
         except Exception as e:
             raise PairingError(details=f"Msg: {e}")
+
         try:
             # Parse the response. Let the PairResponse class handle validation.
             self.pair_response = cattr.structure(response_json, PairResponse)
@@ -183,12 +174,20 @@ class Pairing(object):
                     json=cattr.unstructure(auth_request),
                     timeout=MAX_TIMEOUT_SEC,
             ) as response:
+
+                # Check status code first
+                if response.status_code != 200:
+                    raise PairingError(
+                        details=f"StatusCode: {response.status_code} - Response: {response.text}"
+                    )
+
                 response_json = json.loads(response.text)
+
         except requests.HTTPError as e:
-            if 200 != response.status_code:
-                raise PairingError(
-                    details=f"StatusCode: {response.status_code} - Msg: {e}"
-                )
+            # This is now redundant but kept for defensive programming
+            raise PairingError(
+                details=f"HTTP Error - StatusCode: {response.status_code} - Msg: {e}"
+            )
         except requests.ConnectionError as e:
             raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
         except requests.Timeout as e:
@@ -218,7 +217,6 @@ class Pairing(object):
                     pair_response=self.pair_response,
                     auth_response=self.auth_response
                 )
-
                 return True
             except Exception as e:
                 raise PairingError(details=f"Unable to write certs to disk: {e}")

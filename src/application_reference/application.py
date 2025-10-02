@@ -451,7 +451,7 @@ class ClientApplication(object):
                     #
                     # Possibly the client has been deprovisioned or certs have expired.
                     #
-                    if state in ["DISCONNECTED"]:
+                    if state in ["DISCONNECTED", "CONNECTING"]:
                         if online == "ONLINE":
                             print(f"Unable to connect to the service, but the device is online. "
                                   f"Likely, the certs have expired or the device has been deprovisioned.",
@@ -460,7 +460,7 @@ class ClientApplication(object):
                             # Persistent in this case is about 30 seconds ( 10 tries x 3s interval )
                             if failed_connect_attempts_while_online > 10:
                                 print("Too many failed connect attempts. Deprovisioning...")
-                                requests.post(DEPROVISION, json={'force': True}, timeout=5)
+                                requests.post(DEPROVISION, params={"host_id": host_id, 'force': True}, timeout=5)
                                 self.running = False
                                 break
 
