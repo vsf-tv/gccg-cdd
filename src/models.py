@@ -153,12 +153,17 @@ class Response(object):
                      the user or simply retain for debug/logging.
             }
         """
-        return {
+
+        resp_msg = {
             "success": self.success,
             "state": self.state.value,  # convert to str
             "message": self.message,
             "error": Error(self.exception).to_dict() if self.exception else None
         }
+
+        logger.info(f"SDK Response: {resp_msg}")
+
+        return resp_msg
 
 
 class ConnectResponse(Response):

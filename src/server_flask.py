@@ -99,6 +99,8 @@ class APIServer:
         @self.app.route("/connect", methods=["GET"])
         def connect():
             host_id = request.args.get('host_id')
+            if not host_id:
+                return jsonify({"error": "host_id is required"}), 400
             response = jsonify(self.sdk_manager.get_client().connect(host_id=host_id).to_dict())
             return response
 
@@ -117,7 +119,7 @@ class APIServer:
             payload = request.get_json()
             return jsonify(
                 self.sdk_manager.get_client()
-                .report_status(instance_schema_compliant_payload=payload)
+                .report_status(payload=payload)
                 .to_dict()
             )
 
@@ -127,9 +129,16 @@ class APIServer:
 
         @self.app.route("/deprovision", methods=["POST"])
         def deprovision():
-            payload = request.get_json()
-            force = payload.get("force", False)
-            return jsonify(self.sdk_manager.get_client().deprovision(force=force).to_dict())
+            host_id: str = request.args.get('host_id')
+            if not host_id:
+                return jsonify({"error": "host_id is required"}), 400
+            force: bool = request.args.get('force', '').lower() in ('true', '1')
+            return jsonify(
+                self.sdk_manager.get_client().deprovision(
+                    host_id=host_id,
+                    force=force
+                ).to_dict()
+            )
 
     def run(self, host: str, port: int):
         self.app.run(host=host, port=port)
@@ -162,7 +171,8 @@ def main(device_local_id: str,
          log_path: str,
          ip: str,
          port: int,
-         device_type: str):
+         device_type: str
+         ):
 
     server = APIServer(
         certs_path=certs_path,
@@ -244,6 +254,7 @@ if __name__ == "__main__":
         type=str,
         help="see MessageProtocol: SUPPORTED_DEVICE_TYPES eg. ENCODER|DECODER."
     )
+
     args = parser.parse_args()
     main(
         device_local_id=args.internal_device_id,
