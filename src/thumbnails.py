@@ -108,7 +108,6 @@ class ThumbnailManager(object):
                 if not validate_request_params(request):
                     return
                 self.thumbnail_uploader[key] = ThumbnailThreadedUploader(request, key)
-                self.thumbnail_uploader[key] = ThumbnailThreadedUploader(request, key)
                 self.thumbnail_uploader[key].start()
         except (TypeError, ValueError, AttributeError) as e:
             raise InvalidThumbnailSubscription(details=f"Invalid payload. Msg: {e}.") from e
