@@ -38,9 +38,11 @@ class CustomRotatingFileHandler(RotatingFileHandler):
         self.callback_target_filename = str(filename) + ".1"
 
     def doRollover(self):
+        # Implements log rotation on the local filesystem
         super().doRollover()
         if self.callback_dump_logs:
             if os.path.exists(self.callback_target_filename):
+                # Optionally calls the registered handler.  For example, send logs to the host-service.
                 self.callback_dump_logs(self.callback_target_filename)
 
 
