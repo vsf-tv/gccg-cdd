@@ -299,7 +299,7 @@ class ClientApplication(object):
         Alternatively, shutting down the client process will attempt to inform the service in it shutdown hanlder.
         """
         print("Received shutdown signal, cleaning up...")
-        response = requests.get(DISCONNECT, timeout=1)
+        response = requests.put(DISCONNECT, timeout=1)
         self.running = False
 
     def report_status(self):
@@ -308,7 +308,7 @@ class ClientApplication(object):
         TODO:  This application will provide a complete status based on the actual application status.
         """
         status_payload = self.encoder.get_encoder_status() | self.current_configuration
-        response = requests.post(REPORT_STATUS, json=status_payload, timeout=5)
+        response = requests.put(REPORT_STATUS, json=status_payload, timeout=5)
         if response.status_code == 200:
             sdk_response = parse_api_response(response)
             print(
@@ -424,7 +424,7 @@ class ClientApplication(object):
         while self.running:
             try:
                 print("........................")
-                response = requests.get(CONNECT, params={"host_id": host_id}, timeout=5)
+                response = requests.put(CONNECT, params={"host_id": host_id}, timeout=5)
                 if response.status_code == 200:
                     sdk_response = parse_api_response(response)
                     online = sdk_response.get('online_state')
@@ -460,7 +460,7 @@ class ClientApplication(object):
                             # Persistent in this case is about 30 seconds ( 10 tries x 3s interval )
                             if failed_connect_attempts_while_online > 10:
                                 print("Too many failed connect attempts. Deprovisioning...")
-                                requests.post(DEPROVISION, params={"host_id": host_id, 'force': True}, timeout=5)
+                                requests.put(DEPROVISION, params={"host_id": host_id, 'force': True}, timeout=5)
                                 self.running = False
                                 break
 

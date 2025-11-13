@@ -48,7 +48,7 @@ from models import (
     GetConfigurationResponse,
     DeprovisionResponse
 )
-from service_api_models import DeprovisionMessage, CertRotate, Telemetry, LogRequest, ReportMessage
+from service_api_models import DeprovisionMessage, CertRotate, Telemetry, LogRequest, ReportMessage, DeprovisionReason
 from utils import upload_file
 
 from utils import (
@@ -70,7 +70,6 @@ SUPPORTED_DEVICE_TYPES = [
     "ENCODER",
     "DECODER",
 ]  # (see: Message Protocol: SUPPORTED_DEVICE_TYPES)
-
 
 class CddSdk(object):
     """
@@ -109,7 +108,7 @@ class CddSdk(object):
         )
         self.logger = CDDLogHandler(
             call_back_function=self._report_logs,
-            device_id="unk",
+            device_id="",
             log_path=log_path
         )
         self._processing_log_put = False  # Failsafe: simply drop sending logs if logs are spewing.
@@ -157,6 +156,7 @@ class CddSdk(object):
         """
         self.host_id = None  # Unsetting host_id indicates host is no longer/not initialized.
         self.certs = None
+        self.logger.update_device_id("")
         self.configuration = Configuration()
         self._schema_delivered = False
         self._transition(States.DISCONNECTED)
@@ -253,6 +253,7 @@ class CddSdk(object):
                     return (
                         self._start_connect()
                     )  # start_connect() will update state as will any callbacks.
+
 
                 # Expired?
                 if self.pairing.is_expired():
@@ -403,8 +404,10 @@ class CddSdk(object):
         Deprovision the device from the host service. Certs/Identify deleted.
         Returns a DisconnectResponse().
 
-        If not CONNECTED, requires force=True.
-        SDK will inform the service the user deprovisioned the client if state == CONNECTED.
+        Requires -f if not CONNECTED to service: <host_id>
+
+        Client should first attempt to connect to <host_id> and then deprovision to inform the service to
+        clean up any service-side resources associated with this client.
 
         Raises:
             None
@@ -418,49 +421,17 @@ class CddSdk(object):
             message = f"Deprovisioned credentials for host: {host_id}"
             exception = None
 
-            def inform_host_service():
-                # The SDK informs the service when CONNECTED. Service can process the change.
-                if self.host_id == host_id:
-                    try:
-                        deprovision_message = DeprovisionMessage(
-                            reason="Deprovision requested by user",
-                            time=int(time.time())
-                        )
-                        str_payload = json.dumps(cattr.unstructure(deprovision_message))
-                    except Exception as e:
-                        raise ReportSchemaError(details=str(e)) from e
-
-                    # This should never happen since we are in the CONNECTED state.
-                    topics = self.certs.get_topics()
-                    if not topics or not self.mqtt_client:
-                        raise ConnectError(details="Unable to report schema while not connected")
-
-                    publish_message(
-                        client=self.mqtt_client,
-                        topic=topics.deprovision_inform_service,
-                        payload=str_payload,
-                        qos=1,
-                        retain=False,
-                    )
-                    time.sleep(1)  # Let the message be sent, plenty of time.
-
-            def delete_credentials():
-                CredentialStore(self.certs_path, self.device_local_id, host_id).deprovision()
-                self._reset()
-
+            if not self._connected_to(host_id) and not force:
+                message = f"Must use --force to deprovision client while not CONNECTED to: {host_id} "
+                return DeprovisionResponse(
+                    success=success,
+                    state=self.state,
+                    message=message,
+                    exception=exception
+                )
             try:
-                if self.state not in [States.CONNECTED, States.CONNECTING] and not force:
-                    raise ValueError("Can only deprovision when CONNECTED or using optional force argument.")
+                self._handle_deprovision(host_id=host_id)
 
-                if self.state == States.CONNECTED:
-                    inform_host_service()
-                else:
-                    logger.info(f"Deprovisioning {host_id} while not CONNECTED: Host-Service will not be informed.")
-                delete_credentials()
-
-            except ValueError as e:
-                success = False
-                message = str(e)
             except Exception as e:
                 success = False
                 message = f"Error in Deprovision: {e}"
@@ -468,7 +439,7 @@ class CddSdk(object):
 
             return DeprovisionResponse(
                 success=success,
-                state=States.DISCONNECTED,
+                state=self.state,
                 message=message,
                 exception=exception
             )
@@ -962,19 +933,19 @@ class CddSdk(object):
 
     def _deprovision_device_callback(self, client, userdata, message):
         """
-        Callback on service deporvisioning the client.  SDK Will reset the connection.  Subsequent calls to connect()
+        Callback on service deporvisioning the client.  SDK Will reset the connection. Subsequent calls to connect()
         will not be successful as the service has invalidated the certs.
         """
         try:
             message_json: dict = json.loads(message.payload.decode("utf-8"))
-        except json.JSONDecodeError as e:
-            raise DeprovisionError(details=f"Could not parse deprovision payload: {message}.  Msg: {e}") from e
-        try:
             deprovision_message: DeprovisionMessage = cattr.structure(message_json, DeprovisionMessage)
-            logger.info(f"Service deprovisinoed client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
-            self._reset()
+            logger.info(f"Service deprovisioned client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
+            # Acknowledge the deprovisioning, then reset the connection to force a re-pairing.
+            self._handle_deprovision(host_id=self.host_id)
+
         except Exception as e:
-            raise DeprovisionError(details=f"Could not parse deprovision model: {message_json}.  Msg: {e}") from e
+            raise DeprovisionError(details=f"Error processing deprovision: {message}.  Msg: {e}") from e
+
 
     def _update_log_subscription_callback(self, client, userdata, message):
         """
@@ -1026,3 +997,61 @@ class CddSdk(object):
             logger.exception(f"Can't publish status. Msg: {e}")
         finally:
             self._processing_log_put = False
+
+
+    def _inform_host_service_deprovision(self, host_id: str):
+        # Ack for having received a deprovision message.
+        if self._connected_to(host_id):
+            logger.info(f"Publishing deprovision message to host service. {host_id}")
+            try:
+                deprovision_message = DeprovisionMessage(
+                    reason=DeprovisionReason.DEPROVISIONED,
+                    time=int(time.time())
+                )
+                str_payload = json.dumps(cattr.unstructure(deprovision_message))
+            except Exception as e:
+                raise DeprovisionError(details=str(e)) from e
+
+            # This should never happen since we are in the CONNECTED state.
+            topics = self.certs.get_topics()
+            if not topics or not self.mqtt_client:
+                raise ConnectError(details="Unable to report deprovision while not connected")
+
+            publish_message(
+                client=self.mqtt_client,
+                topic=topics.deprovision_inform_service,
+                payload=str_payload,
+                qos=1,
+                retain=False,
+            )
+            time.sleep(3)  # Let the message be sent, plenty of time.
+
+    def _handle_deprovision(self, host_id: str):
+        try:
+            if not self._connected_to(host_id):
+                # When not connected, we simply delete credentials
+                logger.info(f"Deprovisioning client while not CONNECTED: Host-Service will not be informed.")
+                self._delete_credentials(host_id=host_id)
+            else:
+                # Attempt to inform the service
+                try:
+                    self._inform_host_service_deprovision(host_id=host_id)
+                except Exception as e:
+                    logger.exception(f"Error informing host service of deprovisioning. Msg: {e}")
+                # Complete deletion of credentials.
+                self._delete_credentials(host_id=host_id)
+                self._reset()
+        except Exception as e:
+            raise DeprovisionError(details=str(e)) from e
+
+
+
+    def _delete_credentials(self, host_id: str):
+        # when not connected just
+        if not self.host_id or self.host_id == host_id:
+            logger.info(f"Deleting credentials for {host_id}.")
+            CredentialStore(self.certs_path, self.device_local_id, host_id).deprovision()
+            self._reset()
+
+    def _connected_to(self, host_id: str):
+        return self._is(States.CONNECTED) and host_id == self.host_id

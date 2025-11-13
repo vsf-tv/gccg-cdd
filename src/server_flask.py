@@ -93,10 +93,10 @@ class APIServer:
             response.headers["Access-Control-Allow-Headers"] = (
                 "Content-Type,Authorization"
             )
-            response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+            response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,OPTIONS"
             return response
 
-        @self.app.route("/connect", methods=["GET"])
+        @self.app.route("/connect", methods=["PUT"])
         def connect():
             host_id = request.args.get('host_id')
             if not host_id:
@@ -104,7 +104,7 @@ class APIServer:
             response = jsonify(self.sdk_manager.get_client().connect(host_id=host_id).to_dict())
             return response
 
-        @self.app.route("/disconnect", methods=["GET"])
+        @self.app.route("/disconnect", methods=["PUT"])
         def disconnect():
             return jsonify(self.sdk_manager.get_client().disconnect().to_dict())
 
@@ -114,7 +114,7 @@ class APIServer:
                 self.sdk_manager.get_client().get_connection_status().to_dict()
             )
 
-        @self.app.route("/report_status", methods=["POST"])
+        @self.app.route("/report_status", methods=["PUT"])
         def report_status():
             payload = request.get_json()
             return jsonify(
@@ -127,7 +127,7 @@ class APIServer:
         def get_configuration():
             return jsonify(self.sdk_manager.get_client().get_configuration().to_dict())
 
-        @self.app.route("/deprovision", methods=["POST"])
+        @self.app.route("/deprovision", methods=["PUT"])
         def deprovision():
             host_id: str = request.args.get('host_id')
             if not host_id:

@@ -3,6 +3,7 @@ import datetime
 import logging
 import json
 import time
+from enum import Enum
 from typing import Dict
 
 
@@ -22,6 +23,11 @@ def is_csr(instance, attribute, value):
     if not value.startswith(req):
         raise ValueError(f"{attribute.name} must start with {req}.  Got: {value}")
 
+
+class DeprovisionReason(Enum):
+    DEPROVISIONED = "DEPROVISIONED"
+    EXPIRED = "EXPIRED"
+    UNKNOWN = "UNKNOWN"
 
 @attr.define
 class HostSettings:
@@ -145,9 +151,6 @@ class CertRotate:
     """
     Host Service API defines the following payload for Cert rotation
     """
-    device_id: str = attr.field(
-        validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
-    )
     MQTTUri: str = attr.field(
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
@@ -164,9 +167,9 @@ class DeprovisionMessage:
     """
     Host Service API defines the following payload for a Deprovision Message
     """
-    reason: str = attr.field(
-        default="none",
-        validator=attr.validators.instance_of(str)
+    reason: DeprovisionReason = attr.field(
+        default=DeprovisionReason.UNKNOWN,
+        validator=attr.validators.instance_of(DeprovisionReason)
     )
     time: int = attr.field(
         default=int(time.time()),
