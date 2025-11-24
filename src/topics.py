@@ -43,6 +43,9 @@ class Topics(object):
             # Publish: sending scoped-schema to the service.
             self.report_schema = host_settings.pub_report_schema_topic
 
+            # Publish: sending scoped-schema to the service.
+            self.report_registration = host_settings.pub_report_registration_topic
+
             # Publish: sending status to the service.
             self.report_status = host_settings.pub_report_status_topic
 
@@ -59,6 +62,7 @@ class Topics(object):
             logger.info(f"Topics: Sub: {self.update_certs}")
             logger.info(f"Topics: Sub: {self.update_thumbnail}")
             logger.info(f"Topics: Pub: {self.report_schema}")
+            logger.info(f"Topics: Pub: {self.report_registration}")
             logger.info(f"Topics: Pub: {self.report_status}")
             logger.info(f"Topics: Pub: {self.deprovision_inform_service}")
             logger.info(f"Topics: Sub: {self.deprovision_inform_client}")

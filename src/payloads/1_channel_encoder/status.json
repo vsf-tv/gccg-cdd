@@ -1,0 +1,54 @@
+{
+  "channels": [
+    {
+      "id": "CH01",
+      "state": "IDLE",
+      "status": [
+        {
+          "name": "model",
+          "value": "Talon",
+          "info": "Hardware device model identifier."
+        },
+        {
+          "name": "serial",
+          "value": "123456789",
+          "info": "Device serial number."
+        },
+        {
+          "name": "manufacturer",
+          "value": "Osprey",
+          "info": "Device manufacturer name."
+        },
+        {
+          "name": "encoder_bitrate",
+          "value": "20000bps",
+          "info": "Bitrate configured on the video encoder."
+        },
+        {
+          "name": "cpu",
+          "value": "41%",
+          "info": "Current CPU utilization."
+        },
+        {
+          "name": "temp",
+          "value": "80c",
+          "info": "Current system temperature."
+        }
+      ],
+      "connection": {
+        "metrics": {
+          "total_packets": 1500000,
+          "dropped_packets": 25,
+          "recovered_packets": 10,
+          "unrecovered_packets": 15,
+          "resent_packets": 50,
+          "fec_packets": 0,
+          "fec_recovered_packets": 0,
+          "bitrate_Mbps": 0,
+          "rtt": 7,
+          "rtt_variance": 0
+        }
+      }
+    }
+  ]
+}

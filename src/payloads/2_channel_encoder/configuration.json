@@ -1,0 +1,50 @@
+{
+  "channels": [
+    {
+      "id": "CH01",
+      "state": "ACTIVE",
+      "settings": [
+        { "id": "RS01", "value": "1920x1080" },
+        { "id": "FR01", "value": "60" },
+        { "id": "CBR1", "value": 8000 },
+        { "id": "INP", "value": "SDI1"}
+      ],
+      "connection": {
+        "transport_protocol": {
+          "srt_listener": {
+            "ip": "10.10.1.100",
+            "port": 5000,
+            "latency_ms": 150,
+            "stream_id": "contribution123",
+            "encryption": {
+              "aes128_passcode": "aabbccddeeff00112233445566778899"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "CH02",
+      "state": "IDLE",
+      "settings": [
+        { "id": "RS01", "value": "1920x1080" },
+        { "id": "FR01", "value": "60" },
+        { "id": "CBR1", "value": 8000 },
+        { "id": "INP", "value": "SDI1"}
+      ],
+      "connection": {
+        "transport_protocol": {
+          "srt_listener": {
+            "ip": "10.10.1.100",
+            "port": 5001,
+            "latency_ms": 150,
+            "stream_id": "contribution123",
+            "encryption": {
+              "aes128_passcode": "aabbccddeeff00112233445566778899"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
