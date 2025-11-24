@@ -29,10 +29,15 @@ The following python external packages are required
 - jsonschema
 - paho.mqtt.client
 - requests
-- cryptography
+- cryptography 
+- attrs 
+- cattrs 
+- pytest 
+- referencing
+
 
 ## System Requirements
-- Python 3.10 or newer
+- Python 3.12 or newer
 - RAM: SDK Consumes around 37MB
 - File Read/Write
 
@@ -53,11 +58,8 @@ embedded systems:
 
 ### Work in progress...
 
-- Add deregister API
-- Add standardized logging 
-- Add telemetry
 - Add unit and integration test
-- Add Instance Schema rules validator
+- Fully Open Schema for configuration
 
 
 ## Application Reference Design Prerequisite: FFMPEG
@@ -198,7 +200,7 @@ reference design.
 
 Step 0:
 ```bash
-Install python 3.10 or greater on your system
+Install python 3.12 or greater on your system
 ```
 
 Step 1:
@@ -259,8 +261,8 @@ Step 1:
 Run the SDK Daemon.
 
 The SDK will start, but will otherwise do nothing except quietly await API requests from the ARD.  
-> python3 src/server_flask.py --certs_path $CERTS_PATH --schema_path $INSTANCE_SCHEMA --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type ENCODER --internal_device_id  $ID
-```
+> python3 src/server_flask.py --certs_path $CERTS_PATH --schema_path <cdd sdk path>/src/schemas/  --registration_file_path <cdd sdk path>/src/payloads/1_channel_encoder/registration.json  --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type [SOURCE | DESTINATION] --internal_device_id  $I --log_path /tmp/ 
+``` 
 
 Step 2:
 ```bash
@@ -514,13 +516,11 @@ To view the image you must base64 decode base64_image and open in an appropriate
 
 ### De-Register or Un-claim the device
 ```bash
-# This initiates an un-pairing process on the client.  A connected client will be disconnected and subsequent connection
-# attempts responses =  Response(state)=CONNECTING and Response(online_state)=ONLINE.
-# A persistent CONNECTING/ONLINE condition indicates the device has been deprovisioned or credentials have expired.
+# This initiates an un-pairing process on the client.  A connected client will be disconnected.
+# A client that is in a DISCONNECTED state when deprovisioned, will be able to connect at a later time where it will
+# immediately be deprovision and be disconnected. 
 
-# Note: The MQTT protocol and supporting clients unfortunately do not provide a positive indication of expired certs
-# on connection attempts.
-
+# Once deprovisoined, any subsequent call to connect will start the pairing process.  
 
 Request Path:  <base_endpoint>/dev/deprovision/{device-id}
 Request Type: PUT

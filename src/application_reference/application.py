@@ -40,15 +40,14 @@ DEPROVISION = f"http://127.0.0.1:{PORT}/deprovision"
 
 # From project source root.
 current_dir = os.path.dirname(os.path.abspath(__file__))
-CONFIGURATION_JSON_FILE = os.path.join(current_dir, "example_config.json")
-STATUS_JSON_FILE = os.path.join(current_dir, "example_status.json")
+STATUS_JSON_FILE = os.path.join(current_dir, "status.json")
 
 
-def get_simulated_bitrate():
+def get_simulated_bitrate() -> str:
     """
     Returns a fake bitrate int between 20000 and 30000
     """
-    return int((time.time() * 1000) % 10000) + 20000
+    return str(int((time.time() * 1000) % 10000) + 20000)
 
 
 class Encoder(object):
@@ -81,24 +80,52 @@ class Encoder(object):
         In practice, a real application should generate a complete status based on the current state.
 
         Returns:
-            A instance-schema compliant status payload that represents the current encoder status.
+            A status-schema compliant status payload that represents the current encoder status.
         """
+        try:
+            with (open(STATUS_JSON_FILE, "r") as f):
+                self.status_payload = json.load(f)
+                if not self.running():
+                    self.status_payload["channels"][0]["state"] = "IDLE"
+                    self.status_payload["channels"][0]["status"] = [
+                        {'name': 'encoder_bitrate', 'value': '0', 'info': 'Bitrate Mbps configured on the video encoder.'},
+                        {'name': 'cpu', 'value': '21', 'info': 'Current CPU % utilization.'},
+                        {'name': 'temp', 'value': '72', 'info': 'CPU in degrees C.'}
+                    ]
+                    self.status_payload["channels"][0]["connection"]["metrics"] = {
+                        "total_packets": 0,
+                        "dropped_packets": 0,
+                        "recovered_packets": 0,
+                        "unrecovered_packets": 0,
+                        "resent_packets": 0,
+                        "fec_packets": 0,
+                        "fec_recovered_packets": 0,
+                        "rtt": 0,
+                        "rtt_variance": 0
+                    }
+                else:
+                    self.status_payload["channels"][0]["state"] = "ACTIVE"
+                    self.status_payload["channels"][0]["status"] = [
+                        {'name': 'encoder_bitrate', 'value': get_simulated_bitrate(), 'info': 'Bitrate Mbps configured on the video encoder.'},
+                        {'name': 'cpu', 'value': '61', 'info': 'Current CPU % utilization.'},
+                        {'name': 'temp', 'value': '84', 'info': 'CPU in degrees C.'}
+                    ]
+                    self.status_payload["channels"][0]["connection"]["metrics"] = {
+                        "total_packets": 10132,
+                        "dropped_packets": 23,
+                        "recovered_packets": 7,
+                        "unrecovered_packets": 0,
+                        "resent_packets": 23,
+                        "fec_packets": 0,
+                        "fec_recovered_packets": 0,
+                        "rtt": 12,
+                        "rtt_variance": 1
+                    }
 
-        with open(STATUS_JSON_FILE, "r") as f:
-            self.status_payload = json.load(f)
-            if not self.running():
-                self.status_payload["status"]["channels"][0]["state"] = "IDLE"
-                self.status_payload["status"]["channels"][0]["output_status"]["state"] = "IDLE"
-                self.status_payload["status"]["channels"][0]["video_status"]["state"] = "IDLE"
-                self.status_payload["status"]["channels"][0]["video_status"]["bitrate"] = 0
-                self.status_payload["status"]["channels"][0]["audio_status"]["state"] = "IDLE"
-            else:
-                self.status_payload["status"]["channels"][0]["state"] = "ACTIVE"
-                self.status_payload["status"]["channels"][0]["output_status"]["state"] = "ACTIVE"
-                self.status_payload["status"]["channels"][0]["video_status"]["state"] = "ACTIVE"
-                self.status_payload["status"]["channels"][0]["video_status"]["bitrate"] = get_simulated_bitrate()
-                self.status_payload["status"]["channels"][0]["audio_status"]["state"] = "ACTIVE"
-            return self.status_payload
+        except Exception as e:
+            print(f"Error Updating status: {e}")
+
+        return self.status_payload
 
     def start(self, str_settings: dict):
 
@@ -170,15 +197,16 @@ class Encoder(object):
 
         try:
             state = (
-                update_message.get("configuration", {})
+                update_message
                 .get("channels", [{}])[0]
                 .get("state")
             )
             srt_settings = (
-                update_message.get("configuration", {})
+                update_message
                 .get("channels", [{}])[0]
-                .get("output_configuration", {})
-                .get("srt")
+                .get("connection", {})
+                .get("transport_protocol", {})
+                .get("srt_caller")
             )
 
             if state == "IDLE":
@@ -208,7 +236,7 @@ class Encoder(object):
 class ThumbnailSimulator(threading.Thread):
     """
     Given a source_dir with a bunch of images (all jpg or all png) copy to dest at the interval.
-    The dest_dir must match the thumbnail_status from the instance schema and status message.
+    The dest_dir must match the thumbnail payload from the registration file and status message.
 
     In practice, the video encoder would be dumping images from the inputs and/or a decoder from the outputs.
     """
@@ -281,13 +309,13 @@ class ClientApplication(object):
         signal.signal(signal.SIGTERM, self.signal_handler)
         self.thumbnail_emitter_sdi = ThumbnailSimulator(
             source_dir=os.path.join(Path(__file__).parent, "thumbnail_images_sdi"),
-            dest="/tmp/image_sdi.jpg",  # Matches schema and status message
+            dest="/tmp/image_sdi.jpg", # See Registration Schema
             interval=2,
             name="sdi"
         )
         self.thumbnail_emitter_hdmi = ThumbnailSimulator(
             source_dir=os.path.join(Path(__file__).parent, "thumbnail_images_hdmi"),
-            dest="/tmp/image_hdmi.jpg",  # Matches schema and status message
+            dest="/tmp/image_hdmi.jpg",
             interval=2,
             name="hdmi"
         )
@@ -307,7 +335,7 @@ class ClientApplication(object):
         Report the current state of the system and the ffmpeg encoder.
         TODO:  This application will provide a complete status based on the actual application status.
         """
-        status_payload = self.encoder.get_encoder_status() | self.current_configuration
+        status_payload = self.encoder.get_encoder_status()
         response = requests.put(REPORT_STATUS, json=status_payload, timeout=5)
         if response.status_code == 200:
             sdk_response = parse_api_response(response)
@@ -316,6 +344,8 @@ class ClientApplication(object):
                 f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
                 f" message: {sdk_response.get('message')}"
             )
+        else:
+            print(f"report_status Failed: {response.status_code} {response.text}")
 
     def get_configuration(self):
         """
@@ -488,7 +518,7 @@ class ClientApplication(object):
                 print(f"An error occurred: {e}")
 
             # Simulate producing a thumbnail image.  Copy from the SDK repository to the thumbnail directory
-            # advertised in the instance schema.
+            # advertised in the registration file.
             time.sleep(3)
 
         self.thumbnail_emitter_sdi.stop()

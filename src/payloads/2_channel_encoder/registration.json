@@ -1,0 +1,261 @@
+{
+  "channels": [
+    {
+      "name": "Encoder Channel 1",
+      "id": "CHA1",
+      "channel_type": "SOURCE",
+      "connection_protocols": [
+        "srt_caller",
+        "srt_listener"
+      ],
+      "setting_profiles": [
+        {
+          "name": "h264_contribution_compact",
+          "id": "h264c",
+          "info": "H264, 30fps, 10mbs, 720p, 6s gop"
+        },
+        {
+          "name": "h264_contribution_full",
+          "id": "h264f",
+          "info": "H264, 60fps, 20mbs, 1080p, 3s gop"
+        },
+        {
+          "name": "h265_contribution_compact",
+          "id": "h265c",
+          "info": "H265, 30fps, 10mbs, 1080p, 3s gop"
+        },
+        {
+          "name": "h265_4k",
+          "id": "h265k",
+          "info": "H265, 60fps, 40mps, 4k, 3s gop"
+        },
+        {
+          "name": "h265_4k_low_latency",
+          "id": "h265k",
+          "info": "H265, 60fps, 40mps, 4k, 500ms gop"
+        }
+      ],
+      "settings": [
+        {
+          "name": "resolution",
+          "info": "Output video dimensions.",
+          "id": "RS01",
+          "enums": {
+            "values": [
+              "1920x1080",
+              "1280x720",
+              "640x480"
+            ],
+            "default_value": "1920x1080"
+          }
+        },
+        {
+          "name": "framerate",
+          "info": "Frames per second (fps).",
+          "id": "FR01",
+          "enums": {
+            "values": [
+              "30",
+              "60",
+              "25"
+            ],
+            "default_value": "30"
+          }
+        },
+        {
+          "name": "max_bitrate",
+          "info": "Maximum data rate limit (Kbps).",
+          "id": "MB01",
+          "ranges": {
+            "min": 5000,
+            "max": 50000,
+            "default_value": 10000
+          }
+        },
+        {
+          "name": "rate_control",
+          "info": "Method used to control the output bitrate.",
+          "id": "RC01",
+          "enums": {
+            "values": [
+              "CBR",
+              "VBR",
+              "ABR"
+            ],
+            "default_value": "CBR"
+          }
+        },
+        {
+          "name": "codec",
+          "info": "Video compression standard.",
+          "id": "CO01",
+          "enums": {
+            "values": [
+              "H.264",
+              "H.265",
+              "VP9"
+            ],
+            "default_value": "H.264"
+          }
+        },
+        {
+          "name": "gop_size",
+          "info": "Group of Pictures (I-frame interval in frames).",
+          "id": "GP01",
+          "enums": {
+            "values": [
+              "30",
+              "60",
+              "90"
+            ],
+            "default_value": "60"
+          }
+        },
+        {
+          "name": "selected_input",
+          "info": "Hardware input source selection.",
+          "id": "IN01",
+          "enums": {
+            "values": [
+              "SDI1",
+              "HDMI1",
+              "IP"
+            ],
+            "default_value": "SDI1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Encoder Channel 2",
+      "id": "CHA2",
+      "channel_type": "SOURCE",
+      "connection_protocols": [
+        "srt_caller",
+        "srt_listener"
+      ],
+      "setting_profiles": [
+        {
+          "name": "h264_contribution_compact",
+          "id": "h264c",
+          "info": "H264, 30fps, 10mbs, 720p, 6s gop"
+        },
+        {
+          "name": "h264_contribution_full",
+          "id": "h264f",
+          "info": "H264, 60fps, 20mbs, 1080p, 3s gop"
+        },
+        {
+          "name": "h265_contribution_compact",
+          "id": "h265c",
+          "info": "H265, 30fps, 10mbs, 1080p, 3s gop"
+        },
+        {
+          "name": "h265_4k",
+          "id": "h265k",
+          "info": "H265, 60fps, 40mps, 4k, 3s gop"
+        },
+        {
+          "name": "h265_4k_low_latency",
+          "id": "h265k",
+          "info": "H265, 60fps, 40mps, 4k, 500ms gop"
+        }
+      ],
+      "settings": [
+        {
+          "name": "resolution",
+          "info": "Output video dimensions.",
+          "id": "RS01",
+          "enums": {
+            "values": [
+              "1920x1080",
+              "1280x720",
+              "640x480"
+            ],
+            "default_value": "1920x1080"
+          }
+        },
+        {
+          "name": "framerate",
+          "info": "Frames per second (fps).",
+          "id": "FR01",
+          "enums": {
+            "values": [
+              "30",
+              "60",
+              "25"
+            ],
+            "default_value": "30"
+          }
+        },
+        {
+          "name": "max_bitrate",
+          "info": "Maximum data rate limit (Kbps).",
+          "id": "MB01",
+          "ranges": {
+            "min": 5000,
+            "max": 50000,
+            "default_value": 10000
+          }
+        },
+        {
+          "name": "rate_control",
+          "info": "Method used to control the output bitrate.",
+          "id": "RC01",
+          "enums": {
+            "values": [
+              "CBR",
+              "VBR",
+              "ABR"
+            ],
+            "default_value": "CBR"
+          }
+        },
+        {
+          "name": "codec",
+          "info": "Video compression standard.",
+          "id": "CO01",
+          "enums": {
+            "values": [
+              "H.264",
+              "H.265",
+              "VP9"
+            ],
+            "default_value": "H.264"
+          }
+        },
+        {
+          "name": "gop_size",
+          "info": "Group of Pictures (I-frame interval in frames).",
+          "id": "GP01",
+          "enums": {
+            "values": [
+              "30",
+              "60",
+              "90"
+            ],
+            "default_value": "60"
+          }
+        },
+        {
+          "name": "selected_input",
+          "info": "Hardware input source selection.",
+          "id": "IN01",
+          "enums": {
+            "values": [
+              "SDI1",
+              "HDMI1",
+              "IP"
+            ],
+            "default_value": "SDI1"
+          }
+        }
+      ]
+    }
+  ],
+  "thumbnails": [{
+    "name": "Channel Preview",
+    "id": "TMB1",
+    "local_path": "/var/cache/previews/chA.png"
+  }]
+}

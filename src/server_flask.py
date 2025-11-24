@@ -45,7 +45,7 @@ class CddSdkManager:
     _instance: Optional["CddSdkManager"] = None
     _DSDK_client = None
 
-    def __init__(self, certs_path: str, device_local_id: str, schema_file: str, device_type: str, log_path: str):
+    def __init__(self, certs_path: str, device_local_id: str, schema_path: str, registration_file: str, device_type: str, log_path: str):
         # If the SDK fails to load because the paths or schema file are bad, then an Exception will
         # be thrown here. These are indeed fatal errors and the application should not continue.
 
@@ -53,7 +53,8 @@ class CddSdkManager:
             self._DSDK_client = CddSdk(
                 certs_path=certs_path,
                 device_local_id=device_local_id,
-                schema_file=schema_file,
+                schema_path=schema_path,
+                registration_file=registration_file,
                 device_type=device_type,
                 log_path=log_path,
             )
@@ -70,12 +71,13 @@ class CddSdkManager:
 
 
 class APIServer:
-    def __init__(self, certs_path: str, device_local_id: str, schema_file: str, device_type: str, log_path: str):
+    def __init__(self, certs_path: str, device_local_id: str, schema_path: str, registration_file: str, device_type: str, log_path: str):
         self.app = Flask(__name__)
         self.sdk_manager = CddSdkManager(
             certs_path=certs_path,
             device_local_id=device_local_id,
-            schema_file=schema_file,
+            schema_path=schema_path,
+            registration_file=registration_file,
             device_type=device_type,
             log_path=log_path,
         )
@@ -166,7 +168,8 @@ def ensure_single_instance():
 
 def main(device_local_id: str,
          certs_path: str,
-         schema_file: str,
+         schema_path: str,
+         registration_file: str,
          tmp_path: str,
          log_path: str,
          ip: str,
@@ -177,7 +180,8 @@ def main(device_local_id: str,
     server = APIServer(
         certs_path=certs_path,
         device_local_id=device_local_id,
-        schema_file=schema_file,
+        schema_path=schema_path,
+        registration_file=registration_file,
         device_type=device_type,
         log_path=log_path
     )
@@ -218,8 +222,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--schema_path", required=True, type=str, help="Enter a path for the instance schema"
+        "--schema_path", required=True, type=str, help="Enter a path for the CDD protcol schema folder"
     )
+
+    parser.add_argument(
+        "--registration_file_path", required=True, type=str, help="Enter a path for the devices registration file"
+    )
+
     parser.add_argument(
         "--tmp_path",
         required=True,
@@ -252,14 +261,15 @@ if __name__ == "__main__":
         "--device_type",
         required=True,
         type=str,
-        help="see MessageProtocol: SUPPORTED_DEVICE_TYPES eg. ENCODER|DECODER."
+        help="see MessageProtocol: SUPPORTED_DEVICE_TYPES eg. SOURCE|DESTINATION."
     )
 
     args = parser.parse_args()
     main(
         device_local_id=args.internal_device_id,
         certs_path=args.certs_path,
-        schema_file=args.schema_path,
+        schema_path=args.schema_path,
+        registration_file=args.registration_file_path,
         tmp_path=args.tmp_path,
         log_path=args.log_path,
         ip=args.ip,

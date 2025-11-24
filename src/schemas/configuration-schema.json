@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/schemas/configuration-schema.json",
+  "title": "Configuration Schema",
+
+  "type": "object",
+  "properties": {
+    "channels": {
+      "type": "array",
+      "description": "A list of defined channel objects.",
+      "items": {
+        "type": "object",
+        "required": ["id", "state"],
+        "properties": {
+          "id": {
+            "$ref": "definitions/primitives.json#/$defs/id"
+          },
+          "settings": {
+            "$ref": "#/$defs/array_of_id_and_value"
+          },
+          "setting_profile": {
+            "type": "object",
+            "description": "A profile ID to apply.",
+            "properties": {
+              "id": {"type": "string"}
+            }
+          },
+          "state": {
+            "$ref": "definitions/primitives.json#/$defs/state"
+          },
+          "connection": {
+            "type": "object",
+            "properties": {
+              "transport_protocol": {
+                "description": "The configuration for the single active transport protocol.",
+                "type": "object",
+                "maxProperties": 1,
+                "properties": {
+                  "srt_listener": {
+                    "$ref": "definitions/transport_protocols/srt_listener.json#/$defs/srt_listener"
+                  },
+                  "srt_caller": {
+                    "$ref": "definitions/transport_protocols/srt_caller.json#/$defs/srt_caller"
+                  },
+                  "rist_listener": {
+                    "$ref": "definitions/transport_protocols/rist_listener.json#/$defs/rist_listener"
+                  },
+                  "rist_caller": {
+                    "$ref": "definitions/transport_protocols/rist_caller.json#/$defs/rist_caller"
+                  },
+                  "zixi_listener": {
+                    "$ref": "definitions/transport_protocols/zixi_listener.json#/$defs/zixi_listener"
+                  },
+                  "zixi_caller": {
+                    "$ref": "definitions/transport_protocols/zixi_caller.json#/$defs/zixi_caller"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "id_and_value": {
+      "type": "object",
+      "description": "A simple id:value pair",
+      "required": ["id", "value"],
+      "properties": {
+        "id": {"$ref": "definitions/primitives.json#/$defs/id"},
+        "value": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "integer" }
+          ],
+          "description": "to be run-time validated against possible values in registration json"
+        }
+      },
+      "additionalProperties": false
+    },
+    "array_of_id_and_value": {
+      "type": "array",
+      "description": "An array of id:value pairs",
+      "items": {
+        "$ref": "#/$defs/id_and_value"
+      }
+    }
+  }
+}

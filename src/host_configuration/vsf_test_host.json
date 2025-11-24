@@ -1,7 +1,7 @@
 {
     "service_id": "vsf_test_host",
     "service_name": "Test Host for CDD open-source repository",
-    "device_types": ["ENCODER"],
+    "device_types": ["SOURCE", "DESTINATION", "BOTH"],
     "pairing_url": "https://8am5ccbkx2.execute-api.us-east-1.amazonaws.com/Stage",
     "auth_url": "https://nm3atje1zj.execute-api.us-east-1.amazonaws.com/Stage",
     "thumbnail_max_size_KB": 100,

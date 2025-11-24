@@ -11,11 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import base64
 import cattr
 import time
 import json
-from jsonschema import validate
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import MQTT_LOG_ERR, MQTT_LOG_WARNING, MQTT_LOG_DEBUG
 from threading import Lock
@@ -30,7 +28,6 @@ from custom_exceptions import (
     PairingError,
     ReportStatusError,
     ReportSchemaError,
-    SystemIntegrationError,
     CertificatesRotationError,
     InvalidThumbnailSubscription,
     DeprovisionError,
@@ -48,13 +45,13 @@ from models import (
     GetConfigurationResponse,
     DeprovisionResponse
 )
-from service_api_models import DeprovisionMessage, CertRotate, Telemetry, LogRequest, ReportMessage, DeprovisionReason
+from schema_utils import SchemaRegistry
+from service_api_models import DeprovisionMessage, CertRotate, LogRequest, ReportMessage, DeprovisionReason
 from utils import upload_file
 
 from utils import (
     PublishThrottle,
     publish_message,
-    validate_file_exists,
     validate_path_exists_and_writeable,
     OnlineChecker,
     ssl_alpn
@@ -80,7 +77,7 @@ class CddSdk(object):
         certs_path (str): read/write path where certs can be found.
                           Will place new certs in <certs_path>/<device_local_id>
         device_local_id (int): Unique ID for the client, ie serial number etc.
-        schema_file (str): path to the scoped_schema for this device.
+        schema_path (str): path to the scoped_schema for this device.
 
     Raises:
         SystemIntegrationError (see custom_exceptions)
@@ -91,14 +88,16 @@ class CddSdk(object):
         self,
         certs_path: str,
         device_local_id: str,
-        schema_file: str,
+        schema_path: str,
+        registration_file: str,
         device_type: str,
         log_path: str,
     ):
 
         self.certs_path: str = certs_path
         self.device_local_id: str = device_local_id
-        self.schema_file: str = schema_file
+        self.schema_path: str = schema_path
+        self.registration_file: str = registration_file
         self.device_type = device_type
         self._log_request = LogRequest()
 
@@ -111,6 +110,7 @@ class CddSdk(object):
             device_id="",
             log_path=log_path
         )
+
         self._processing_log_put = False  # Failsafe: simply drop sending logs if logs are spewing.
         self._log_spew_detected: int = 0
         self.host_config: Optional[HostConfig] = None
@@ -126,17 +126,9 @@ class CddSdk(object):
 
         # Validate we can write certs to the certs_path: Raise Exception.
         validate_path_exists_and_writeable(certs_path)
-        # Validate we can load the schema: Raise Exception.
-        validate_file_exists(self.schema_file)
-        # Validate we can read the schema: Raise Exception.
-        try:
-            with open(self.schema_file, "r") as f:
-                self.schema = json.loads(f.read())
-        except Exception as e:
-            raise SystemIntegrationError(
-                details=f"Failed to load schema file from device: {self.schema}"
-            )
-        self.telemetry = Telemetry()
+        # Validate the registration file against the registration-schema
+        self.schema_registry = SchemaRegistry(self.schema_path)
+        self.schema_registry.validate_registration_file(file=self.registration_file)
         self._reset()
 
     def shutdown(self):
@@ -158,14 +150,13 @@ class CddSdk(object):
         self.certs = None
         self.logger.update_device_id("")
         self.configuration = Configuration()
-        self._schema_delivered = False
+        self._registration_delivered = False
         self._transition(States.DISCONNECTED)
         self.thumbnail_manager.stop_all()
         if self.mqtt_client:
             self.mqtt_client.disconnect()
             self.mqtt_client.loop_stop()
         self.mqtt_client = None
-        self.telemetry = Telemetry()
 
     def _initialize_host(self, host_id):
         """
@@ -336,6 +327,16 @@ class CddSdk(object):
                     return handler()
 
             except Exception as e:
+                # Force a DISCONNECT for all errors connecting related.
+                # For example, a transient service host service issue providing a bad
+                # pairing response we can't parse.  Need to start with a clean state for
+                # any subsequent connection attempt.
+                try:
+                    logger.info(f"DISCONNECTING due to exception somewhere in connect() {str(e)}")
+                    self._reset()
+                except Exception as e:
+                    logger.info(f"Error in DISCONNECTING {str(e)}")
+
                 return ConnectResponse(
                     success=False,
                     state=self.state,
@@ -470,7 +471,6 @@ class CddSdk(object):
                 # Configuration is locally cached. If the network is down for a moment, can still get latest
                 # if the client so desires.
                 logger.info(f"Passing updated configuration_id: {self.configuration.update_id} to client.")
-                self.telemetry.passed_config_id = self.configuration.update_id
                 return GetConfigurationResponse(
                     success=True,
                     state=self.state,
@@ -479,7 +479,6 @@ class CddSdk(object):
                 )
 
             except Exception as e:
-                self.telemetry.passed_config_id = self.configuration.update_id
                 return GetConfigurationResponse(
                     success=False,
                     state=self.state,
@@ -490,8 +489,7 @@ class CddSdk(object):
 
     def report_status(self, payload: dict) -> ReportStatusResponse:
         """
-        Report instance_schema_compliant_payload to the host service:
-            status and (current) configuration
+        Report status-schema compliant payload to the host service:
         Publishing is internally rate limited (See Throttle).
         Service will handle throttling enforcement by disconnecting or revoking the device if this is a problem.
 
@@ -521,22 +519,16 @@ class CddSdk(object):
 
             def validate_and_publish():
                 try:
-                    validate(schema=self.schema, instance=payload)
-                    self.telemetry.reported_message_valid = True
+                    # Validate the status message against the status-schema
+                    self.schema_registry.validate_status(payload=payload)
                 except Exception as e:
                     # Report failure to service (original behavior)
-                    try:
-                        logger.exception(f"Invalid status payload: {e}")
-                        self.telemetry.reported_message_valid = False
-                        status_message = ReportMessage(cattr.unstructure(self.telemetry), {})
-                        self._do_publish_status_message(status_message)
-                    except Exception as publish_e:
-                        logger.exception(f"Can't publish status. Msg: {publish_e}")
+                    logger.exception(f"Invalid status payload: {e}")
                     raise InvalidStatusMessageError(str(e))
 
                 # Publish the actual message
                 try:
-                    status_message = ReportMessage(telemetry=self.telemetry, message=payload)
+                    status_message = ReportMessage(message=payload)
                     self._do_publish_status_message(status_message)
                 except Exception as e:
                     logger.exception(f"Can't publish status. Msg: {e}")
@@ -569,9 +561,9 @@ class CddSdk(object):
 
         # Publish schema is attempted immediately on on_connect() callback.
         # If that failed, we can try again here and if it fails again we can inform the client.
-        if not self._schema_delivered:
+        if not self._registration_delivered:
             logger.info("Attempting to re-publish schema")
-            self._report_schema()
+            self._report_registration()
 
         # This should never happen since the state must be CONNECTED.
         topics = self.certs.get_topics()
@@ -638,8 +630,8 @@ class CddSdk(object):
         subscribe_to_topic(topics.deprovision_inform_client, self._deprovision_device_callback)
         subscribe_to_topic(topics.update_log, self._update_log_subscription_callback)
 
-        self._report_schema()  # Service will ignore all but the first schema reported by this device_id.
-        self._schema_delivered = True
+        self._report_registration()  # Service will ignore all but the first schema reported by this device_id.
+        self._registration_delivered = True
 
 
     def _on_disconnect(self, client, userdata, flags):
@@ -794,12 +786,11 @@ class CddSdk(object):
             raise InvalidConfigurationError(details=str(e.msg))
 
         try:
-            validate(schema=self.schema, instance=config)
+            # Validate the configuration message against the configuration-schema
+            self.schema_registry.validate_configuration(payload=config)
             logger.info("Got a valid update config")
             # Increments the update_id and saves the payload.
             self.configuration.update_configuration(payload=config)
-            self.telemetry.received_message_valid = True
-            self.telemetry.received_config_id = self.configuration.update_id
         except Exception as e:
             # Validation failure here can only happen if the service failed to validate.
             # Regardless, the SDK will perform its own validation here.
@@ -807,7 +798,6 @@ class CddSdk(object):
             # This is an asynchronous callback.
             # Persist the error in the Configuration class to inform the next get_configuration() Response.
             self.configuration.update_configuration(callback_error=True)
-            self.telemetry.received_message_valid = False
             raise InvalidConfigurationError(details=f"Schema Validation Error: {e}")
 
     def _update_certs_callback(self, client, userdata, message):
@@ -873,7 +863,7 @@ class CddSdk(object):
         except json.JSONDecodeError as e:
             raise InvalidThumbnailSubscription(details=f"Thumbnail subscription: Could not parse.  Msg: {e}") from e
 
-    def _report_schema(self):
+    def _report_registration(self):
         """
         Report the schema to the host service. Service might only accept this once per session.
 
@@ -885,11 +875,9 @@ class CddSdk(object):
             logger.info("Can't report schema when not connected")
             raise ReportSchemaError(details="Can't report schema when not connected")
 
-        # TODO:  Need to check the scoped schema against the protocol schema to ensure it is a
-        #   valid subset according to the rules of the protocol. Raise: InvalidSchemaError.
-
         try:
-            str_payload = json.dumps(self.schema)
+            self.schema_registry.load_json_file(self.registration_file)
+            str_payload = json.dumps(self.schema_registry.load_json_file(self.registration_file))
         except Exception as e:
             raise ReportSchemaError(details=str(e)) from e
 
@@ -904,7 +892,7 @@ class CddSdk(object):
         try:
             publish_message(
                 client=self.mqtt_client,
-                topic=topics.report_schema,
+                topic=topics.report_registration,
                 payload=str_payload,
                 qos=1,
                 retain=False,
@@ -913,7 +901,7 @@ class CddSdk(object):
             raise ReportSchemaError(details=str(e)) from e
 
         # Informs the class this has been done and need not be re-sent.
-        self._schema_delivered = True
+        self._registration_delivered = True
         logger.info("Schema delivered")
 
     def _is(self, state):
@@ -988,7 +976,6 @@ class CddSdk(object):
                 self._log_spew_detected = 0
             if self._log_request.is_valid():
                 logger.info(f"Pushing Logs.")
-                self.telemetry.logs_reported += 1
                 upload_file(log_file_path, self._log_request.remote_path, 5, file_type="log")
             elif self._log_request.expires < int(time.time()):
                 logger.info(f"Log subscription expired.")

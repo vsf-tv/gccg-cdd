@@ -49,6 +49,9 @@ class HostSettings:
     pub_report_schema_topic: str = attr.field(
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
+    pub_report_registration_topic: str = attr.field(
+        validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
+    )
     pub_report_status_topic: str = attr.field(
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
@@ -290,7 +293,6 @@ class ReportMessage:
     """
     Host Service API defines the following payload for a Report Message
     """
-    telemetry: Telemetry = attr.field(validator=attr.validators.instance_of(Telemetry))
     message: Dict = attr.field(factory=dict)  # Must validate to instance schema
 
 
