@@ -177,7 +177,6 @@ class ConnectResponse(Response):
         success,
         state: States,
         message: str = "",
-        online_state: Optional[OnlineStates] = None,
         exception: Optional[Exception] = None,
         device_id: str = "",
         region: str = "",
@@ -188,7 +187,6 @@ class ConnectResponse(Response):
         self.device_id = device_id
         self.pairing_code = pairing_code
         self.expires = expires
-        self.online_state = online_state
         self.region = region
 
     def to_dict(self) -> dict:
@@ -208,7 +206,6 @@ class ConnectResponse(Response):
                 "device_id": self.device_id,
                 "pairing_code": self.pairing_code,
                 "expires": self.expires,
-                "online_state": self.online_state.value if self.online_state else None,
                 "region": self.region,
             }
         )

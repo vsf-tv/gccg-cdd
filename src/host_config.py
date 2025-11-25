@@ -28,15 +28,7 @@ class HostConfig(object):
     log_file_max_size_KB: int = attr.field(validator=attr.validators.instance_of(int))
     pairing_url: str = attr.field(validator=attr.validators.instance_of(str))
     auth_url: str = attr.field(validator=attr.validators.instance_of(str))
-    online_check_urls: List[str] = attr.ib(
-        validator=[
-            attr.validators.instance_of(list),
-            attr.validators.deep_iterable(
-                member_validator=attr.validators.instance_of(str),
-                iterable_validator=attr.validators.instance_of(list)
-            )
-        ]
-    )
+
 
 
 def get_host_config(host_id: str, device_type: str) -> HostConfig:
