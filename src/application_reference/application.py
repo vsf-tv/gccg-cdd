@@ -394,11 +394,6 @@ class ClientApplication(object):
                         valid approach and can simplify client application logic.
             DISCONNECTED: Display state to the user. See: Handling Revoked or Expired Certs below.
 
-            Response(online_state)
-            ONLINE: Response to Port 443/https GET request on one of the URls provided in the host_config was
-                    successful. Indicates network environment is suitable for pairing and MQTT connections.
-            OFFLINE: Connection to pairing and MQTT endpoints is not possible at this time.
-
             Response(success)
             Bool:  True | False
             Indicates the request was fully processed, no exceptions raised.
@@ -435,33 +430,22 @@ class ClientApplication(object):
 
         Application Guidance: Handling Revoked or Expired Certs:
 
-            This is indicated by *persistent* Response(state) == CONNECTING or RECONNETING and
-            Response(online_state) == ONLINE.  This means the client is able to reach the public internet
-            (ONLINE) but can not establish a connection to the service.  The Host API does not provide a definitive
-            means by which a client can disambiguate an outage on the MQTT broker and expired/deprovisioned credentials.
-            MQTT broker endpoints fortunately are generally very resilient with ample redundancy and failover.
+            The client SDK when connected will acknowledge a deprovisioned device, and remove certs locally. If
+            deprovisioned while offline, the device will perform this on the next connection to that host.
 
-            What an application should do:
-            1) Inform the user the client the device is online but a connection is not established
-            2) Inform the user to invoke deprovision and re-pair the device.
-
-            An application SHOULD NOT automatically deprovision and repair as user-involvement is required to
-            re-pair the device.
+            A client calling connect() after deprovision has processed will simply re-enter the pairing state.
         """
         self.thumbnail_emitter_sdi.start()
         self.thumbnail_emitter_hdmi.start()
-        failed_connect_attempts_while_online: int = 0
         while self.running:
             try:
                 print("........................")
                 response = requests.put(CONNECT, params={"host_id": host_id}, timeout=5)
                 if response.status_code == 200:
                     sdk_response = parse_api_response(response)
-                    online = sdk_response.get('online_state')
                     state = sdk_response.get('state')
                     print(
                         f"run_loop Success: {sdk_response.get('success')} State: {state} "
-                        f"online: {online} "
                         f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')} "
                         f" message: {sdk_response.get('message')}."
                     )
@@ -479,26 +463,6 @@ class ClientApplication(object):
                         )
 
                     #
-                    # Possibly the client has been deprovisioned or certs have expired.
-                    #
-                    if state in ["DISCONNECTED", "CONNECTING"]:
-                        if online == "ONLINE":
-                            print(f"Unable to connect to the service, but the device is online. "
-                                  f"Likely, the certs have expired or the device has been deprovisioned.",
-                                  f"Consider, deprovision and re-pairing.")
-                            failed_connect_attempts_while_online += 1
-                            # Persistent in this case is about 30 seconds ( 10 tries x 3s interval )
-                            if failed_connect_attempts_while_online > 10:
-                                print("Too many failed connect attempts. Deprovisioning...")
-                                requests.put(DEPROVISION, params={"host_id": host_id, 'force': True}, timeout=5)
-                                self.running = False
-                                break
-
-                        elif online == "OFFLINE":
-                            print(f"Device is offline, unable to reach the internet and "
-                                  f"will be unable to connect until the network connection is restored.")
-
-                    #
                     # CONNECTED: send any status update, check for an updated configuration.
                     #
                     if sdk_response.get("success") and state in [
@@ -506,7 +470,6 @@ class ClientApplication(object):
                     ]:  # See (SDK models.py).
                         # The service will respond for any state but best to only call these when the SDK is CONNECTED
                         # so that messages sent/received are handled and current.
-                        failed_connect_attempts_while_online = 0
                         self.get_configuration()
                         self.report_status()
 

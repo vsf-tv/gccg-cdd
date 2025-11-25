@@ -53,7 +53,6 @@ from utils import (
     PublishThrottle,
     publish_message,
     validate_path_exists_and_writeable,
-    OnlineChecker,
     ssl_alpn
 )
 
@@ -115,7 +114,6 @@ class CddSdk(object):
         self._log_spew_detected: int = 0
         self.host_config: Optional[HostConfig] = None
         self.mqtt_client: Optional[mqtt.Client] = None
-        self.online_checker: Optional[OnlineChecker] = OnlineChecker([])
         self.thumbnail_manager: ThumbnailManager = ThumbnailManager()
         self.state = States.DISCONNECTED
         self.host_id: str = ""
@@ -136,7 +134,6 @@ class CddSdk(object):
         Rapidly stops all threads and disconnects from the cloud service in preparation for shutdown
         """
         self.thumbnail_manager.stop_all()
-        self.online_checker.stop()
         if self.mqtt_client:
             self.mqtt_client.disconnect()  # inform the service gracefully
             self.mqtt_client.loop_stop()
@@ -163,8 +160,6 @@ class CddSdk(object):
         Prepares the SDK for pairing or connecting to specific host_id.
         """
         self.host_config = get_host_config(host_id, self.device_type)
-        self.online_checker = OnlineChecker(self.host_config.online_check_urls)
-        self.online_checker.start()
         self.certs = CredentialStore(
             self.certs_path, self.device_local_id, host_id
         )
@@ -215,8 +210,7 @@ class CddSdk(object):
                 return ConnectResponse(
                     success=True,
                     state=self.state,
-                    message="Connecting to the service",
-                    online_state=self.online_checker.get_online_state()
+                    message="Connecting to the service"
                 )
 
             def handle_connected_state():
@@ -226,7 +220,6 @@ class CddSdk(object):
                     message="Connected",
                     device_id=self.certs.get_device_id(),
                     region=self.certs.get_region(),
-                    online_state=self.online_checker.get_online_state()
                 )
 
             def handle_reconnecting_state():
@@ -236,7 +229,6 @@ class CddSdk(object):
                     message="Reconnecting...",
                     device_id=self.certs.get_device_id(),
                     region=self.certs.get_region(),
-                    online_state=self.online_checker.get_online_state()
                 )
 
             def handle_pairing_state():
@@ -253,7 +245,6 @@ class CddSdk(object):
                         success=False,
                         state=self.state,
                         message="Pairing code expired. Reconnect to get a new one.",
-                        online_state=self.online_checker.get_online_state()
                     )
 
                 # OK Poll again for credentials. Will either save.
@@ -282,7 +273,6 @@ class CddSdk(object):
                     message="Waiting for device to be claimed",
                     pairing_code=self.pairing.get_pairing_code(),
                     expires=self.pairing.expires_in(),
-                    online_state=self.online_checker.get_online_state()
                 )
 
             def handle_disconnected_state():
@@ -307,7 +297,6 @@ class CddSdk(object):
                     message="Connecting pending. Waiting for device to be claimed",
                     pairing_code=self.pairing.get_pairing_code(),
                     expires=self.pairing.expires_in(),
-                    online_state=self.online_checker.get_online_state()
                 )
 
             # State-based dispatch - only one handler called
@@ -342,7 +331,6 @@ class CddSdk(object):
                     state=self.state,
                     message=f"Error in connect() {str(e)}",
                     exception=e,
-                    online_state=self.online_checker.get_online_state()
                 )
 
     def get_connection_status(self) -> ConnectResponse:
@@ -358,7 +346,6 @@ class CddSdk(object):
             state=self.state,
             message="",
             region=region,
-            online_state=self.online_checker.get_online_state()
         )
 
 
@@ -676,14 +663,12 @@ class CddSdk(object):
                 message="Already connected or automatically re-connecting",
                 device_id=self.certs.get_device_id(),
                 region=self.certs.get_region(),
-                online_state=self.online_checker.get_online_state()
             )
 
         if self.mqtt_client and self.state == States.CONNECTING:
             return ConnectResponse(success=True,
                                    state=self.state,
                                    message="Connecting",
-                                   online_state=self.online_checker.get_online_state()
                                    )
 
         try:
@@ -717,7 +702,6 @@ class CddSdk(object):
                 state=self.state,
                 message="Connection started",
                 region=self.certs.get_region(),
-                online_state=self.online_checker.get_online_state(),
                 device_id=self.certs.get_device_id(),
             )
 
@@ -732,7 +716,6 @@ class CddSdk(object):
                 success=False,
                 state=self.state,
                 message=f"Unable to connect at this time. Check network connection.",
-                online_state=self.online_checker.get_online_state(),
                 exception=ConnectError(
                     "Unable to make initial connection. Check network connection"
                 ),

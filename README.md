@@ -281,7 +281,14 @@ Since this 'device' has not yet been claimed, the SDK finds none.  As a result, 
 Open a new terminal.  (STDOUT messages printed by both the ARD and SDK can thus be seen separately.)
 cd <local cdd installation folder>
 source venv/bin/activate
-python3 ./src/application_reference/application.py --host_id vsf_test_host
+
+For connecting to your own host service:
+1: copy vsf_test_host.json to my_service_name.json.
+2: update the URLs to point to your services pairing and auth endpoints.
+3: Start the application rederenceL:  python3 ./src/application_reference/application.py --host_id <my_service_name>
+
+For conneting to the deployed VSF Test Host
+1. python3 ./src/application_reference/application.py --host_id vsf_test_host
 
 Expected Output: 
 > Device is not paired. Pairing Code: KY84IV  Expires in: 1799s
