@@ -231,6 +231,24 @@ Install python external dependencies (listed in requirements.txt) into your pyth
 > pip3 install -r requirements.txt
 ````
 
+step 5:
+```bash
+Ensure the compiled_schemas have been updated.  Run
+> <cdd install dir>/src/schemas/compile_schemas.py
+> <cdd install dir>/src/schemas/validate_compiled_schemas.py
+
+Expect:
+=== Running test1 ===
+✅ test1 validation successful
+
+=== Running test2 ===
+✅ test2 validation successful
+
+=== Running test3 ===
+✅ test3 validation successful
+
+```
+
 ### Run the Application Reference Design
 The following step will show you how to set up and run the Application Reference Design (ARD) and SDK.  
 The SDK runs as a stand-alone process hosting a rest API.  The ARD simulates a video encoder host system making requests
@@ -261,7 +279,7 @@ Step 1:
 Run the SDK Daemon.
 
 The SDK will start, but will otherwise do nothing except quietly await API requests from the ARD.  
-> python3 src/server_flask.py --certs_path $CERTS_PATH --schema_path <cdd sdk path>/src/schemas/  --registration_file_path <cdd sdk path>/src/payloads/1_channel_encoder/registration.json  --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type [SOURCE | DESTINATION] --internal_device_id  $I --log_path /tmp/ 
+> python3 src/server_flask.py --certs_path $CERTS_PATH --schema_path <cdd sdk path>/src/compiled_schemas/  --registration_file_path <cdd sdk path>/src/payloads/1_channel_encoder/registration.json  --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type [SOURCE | DESTINATION] --internal_device_id  $I --log_path /tmp/ 
 ``` 
 
 Step 2:
@@ -543,4 +561,29 @@ Expected Host Service Response:
 }
 
 # Check the device is no longer a registered device (see DescribeDevice/ListDevices above).
+```
+
+### Developer Instructions
+
+The CDD Protocol schemas are maintained in a manageable, hierarchal form. These will restricted to update pull-requests
+generally since they codify the CDD message payload.  That said, when updating, make changes to the following
+hierarchal and easy to read/edit schemas in:
+```bash
+<cdd>/src/schemas/  
+```
+After any changes, run
+```bash
+<cdd>/src/schemas/compile_schemas.py
+```
+
+The resulting schemas used by the SDK are collapsed and written here for easy loading by the SDK.
+```bash
+<cdd>/src/compiled_schemas/
+```
+
+The developer can validate changes by runninng
+```bash
+<cdd>/src/schemas/validate_schemas.py
+<cdd>/src/schemas/validate_compiled_schemas.py
+
 ```
