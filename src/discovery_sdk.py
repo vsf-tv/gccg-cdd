@@ -859,7 +859,6 @@ class CddSdk(object):
             raise ReportSchemaError(details="Can't report schema when not connected")
 
         try:
-            self.schema_registry.load_json_file(self.registration_file)
             str_payload = json.dumps(self.schema_registry.load_json_file(self.registration_file))
         except Exception as e:
             raise ReportSchemaError(details=str(e)) from e
