@@ -295,7 +295,6 @@ Expected Output:
 >       !copy the above Pairing Code: ^^^^^^
 ```
 
-Step 3:
 ```bash
 Claim the device.
 
@@ -390,12 +389,15 @@ Step 1
 Start the encoder from the VSF Host Endpoint.  
 
 This will update the latest configuration which is validated by the VSF Host Service and communicated to the device.
-Edit: src/application_reference/example_config.json to point to your running SRT listener from the previous step.
+Edit: src/payloads/1_channel_encoder/configuration.json to point to your running SRT listener from the previous step.
 
 Request Path:  <base_endpoint>/dev/device/{device-id} 
 Request Type: PUT 
 Request Body:
-Copy the JSON from src/application_reference/example_config.json  
+Copy the JSON from src/payloads/1_channel_encoder/configuration.json
+
+Note: If using POSTMAN:  In the 'Body' Tab, Select 'Raw' Type.  Paste the configuration.json
+
 
 Expected Host Service Response:
 {
@@ -417,14 +419,14 @@ Step 2
 Stop the encoder from the VSF Host Endpoint.  
 
 This will update the latest configuration which is validated by the VSF Host Service and communicated to the device.
-Edit: src/application_reference/example_config.json to point to your running SRT listener from the previous step.
-Except this time change:
+Edit: src/payloads/1_channel_encoder/configuration.json to point to your running SRT listener from the previous step.
+Except the this time change the Channel param: 
  "state": "ACTIVE" ->  "state": "IDLE",
 
 Request Path:  <base_endpoint>/dev/device/{device-id} 
 Request Type: PUT 
 Request Body:
-Copy the JSON from src/application_reference/example_config.json  
+Copy the JSON from src/payloads/1_channel_encoder/configuration.json
 
 Expected Host Service Response:
 {
