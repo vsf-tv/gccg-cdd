@@ -341,8 +341,7 @@ class ClientApplication(object):
             sdk_response = parse_api_response(response)
             print(
                 f"report_status Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
-                f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
-                f" message: {sdk_response.get('message')}"
+                f" error: {sdk_response.get('error')}  message: {sdk_response.get('message')}"
             )
         else:
             print(f"report_status Failed: {response.status_code} {response.text}")

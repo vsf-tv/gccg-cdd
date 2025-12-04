@@ -16,8 +16,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Short, locally managed unique identifier (max 4 characters).",
-            "maxLength": 12
+            "description": "Short, locally managed unique identifier (max 100 characters).",
+            "maxLength": 100
           },
           "settings": {
             "$ref": "#/$defs/array_of_id_and_value"
@@ -598,8 +598,8 @@
     },
     "id": {
       "type": "string",
-      "description": "Short, locally managed unique identifier (max 4 characters).",
-      "maxLength": 12
+      "description": "Short, locally managed unique identifier (max 100 characters).",
+      "maxLength": 100
     },
     "channel_type": {
       "type": "string",
