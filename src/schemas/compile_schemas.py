@@ -142,7 +142,7 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--source", required=True, type=str, help="Path to <cdd repo>/src/schemas/")
-    parser.add_argument("--destination", required=True, type=str, help="Path to <DiscoveryTestServicePOC>/src/handlers/")
+    parser.add_argument("--destination", required=True, type=str, help="Path to <DiscoveryTestServicePOC>/src/compiled_schemas/")
     args = parser.parse_args()
 
     exit(main(args.source, args.destination))

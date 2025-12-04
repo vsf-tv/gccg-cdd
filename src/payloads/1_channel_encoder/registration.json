@@ -132,6 +132,11 @@
       "name": "Channel Preview",
       "id": "SDI-1",
       "local_path": "/tmp/image_sdi.jpg"
+    },
+    {
+      "name": "Channel Preview",
+      "id": "HDMI-1",
+      "local_path": "/tmp/image_hdmi.jpg"
     }
   ]
 }

@@ -14,13 +14,12 @@
       },
       "connection": {
         "transport_protocol": {
-          "srt_listener": {
+          "srt_caller": {
             "ip": "10.10.1.100",
-            "port": 5000,
+            "port": 2001,
             "latency_ms": 150,
             "stream_id": "contribution123",
             "encryption": {
-              "aes128_passcode": "aabbccddeeff00112233445566778899"
             }
           }
         }

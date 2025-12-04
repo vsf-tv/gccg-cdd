@@ -356,25 +356,21 @@ e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01
 
 Expected Response:
 {
-    "device_id": "001XI02IJ2FtSIirk01",
-    "message": "",
-    "errors": [],
-    "status": {
-        "status": {
-           <see Instance Schema.  See Report Status in MessageProtocol API doc>
-        }
-    },
-    "configuration": {
-        "configuration": {
-          <see Instance Schema.  See Report Status in MessageProtocol API doc>
-        }
-    },
-    "schema": {
-       <Instance Schema: if query string param ?include_schema=true> default=false
-    },
-    "online_details": "online: 0d 0h 12m",
-    "online": true,
-    "cert_expiration": "59d 23h 47m"
+  "device_id": "string - Device identifier",
+  "message": "string - Response message",
+  "errors": ["array of error strings"],
+  "status": {"dict - Current device status data"},
+  "configuration": {"dict - Device configuration settings"},
+  "registration": {"dict - Device registration file: information provided"},
+  "online_details": "string - Connection status details (default: 'offline: -h-m-s')",
+  "online": "boolean - Device online status",
+  "cert_expiration": "string - Certificate expiration info",
+  "device_metadata": {
+    "online": "boolean - Online status",
+    "online_details": "string - Detailed connection info",
+    "cert_expiration": "string - Certificate expiration",
+    "source_ip": "string - Device source IP address"
+  }
 }
 
 
@@ -408,7 +404,11 @@ Start the encoder from the VSF Host Endpoint.
 
 This will update the latest configuration which is validated by the VSF Host Service and communicated to the device.
 Edit: src/payloads/1_channel_encoder/configuration.json to point to your running SRT listener from the previous step.
-
+You will need to change
+1. update the IP, Port,
+2. update the protocol to "srt_caller"
+3. set encrtption to {} (encryption is not enabled in the reference design using simple ffmpeg) 
+      
 Request Path:  <base_endpoint>/dev/device/{device-id} 
 Request Type: PUT 
 Request Body:
@@ -518,7 +518,10 @@ Protocol Restrictions:
 The following is an example Host Service Test Endpoint API.  You can repeatedly call this API to get a fresh image.
 The first response may be empty as the new subscription is being processed.
 
-Request Path:  <base_endpoint>/dev/device/{device-id}?source=<source_id>
+The <thumbnail_id> is provided in the registration_file returned via the DescribeDevice API
+This file is provided by the application reference design on SDK startup.  See: CDD Message Protocol
+
+Request Path:  <base_endpoint>/dev/device/{device-id}?source=<thumbnail_id>
 Request Type: GET
 e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01?source=SDI-1
 e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01?source=HDMI-1
