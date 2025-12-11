@@ -18,6 +18,7 @@ import time
 import ssl
 import paho.mqtt.client as mqtt
 import threading
+from collections import deque
 from models import OnlineStates
 from custom_exceptions import MQTTPublishError
 from cryptography.hazmat.primitives import serialization
@@ -49,28 +50,36 @@ def publish_message(client, topic: str, payload: str, qos: int, retain: bool):
     raise MQTTPublishError(details=f"MQTT publish error. Response Code: {result}")
 
 
-class PublishThrottle(object):
+class Throttle(object):
     """
     Rate limit status updates. The host service will have throttling enforcement that might
     disconnect or revoke a device if it is publishing too frequently. This SDK enforces a minimum
     time to prevent this.
 
-    On returning True, the timer is reset.
+    Maintains a 10s time window so short bursts are somewhat tolerated.
+
+    For mub_min_interval = 2 and a 10-second trailing window: max 5 pubs are allowed and on average no more than
+    1 pub every 2 seconds.  Burst of 5 pubs within a 10s window are still tolerated.
 
     """
-
-    def __init__(self, interval_seconds: int = 5):
-        self.last_publish_time = 0
-        # Get the service specific value.
-        self.publish_interval = interval_seconds
+    def __init__(self, pub_min_interval: int = 1, window_seconds: int = 10):
+        self.max_publish_in_window: int = max(int(window_seconds / max(pub_min_interval, 1)), 5)
+        self.window = window_seconds
+        self.publish_times = deque()
 
     def can_publish(self) -> bool:
         now = int(time.time())
-        if self.last_publish_time + self.publish_interval <= now:
-            self.last_publish_time = now
-            return True
-        return False
-
+        cutoff = now - self.window
+        
+        # Remove expired timestamps from the left (oldest)
+        while self.publish_times and self.publish_times[0] <= cutoff:
+            self.publish_times.popleft()
+        
+        if len(self.publish_times) >= self.max_publish_in_window:
+            return False
+        
+        self.publish_times.append(now)
+        return True
 
 def validate_file_exists(filepath: str):
     if not os.path.exists(filepath):

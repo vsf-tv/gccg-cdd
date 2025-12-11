@@ -219,7 +219,7 @@ class CredentialStore(object):
                     f.write(json.dumps(cattr.unstructure(self.connection_settings)))
 
                 with open(self.host_settings_file, "w") as f:
-                    json.dump(cattr.unstructure(pair_response.host_settings), f)
+                    json.dump(cattr.unstructure(auth_response.host_settings), f)
 
             except Exception as e:
                 # File system Error or some kind of permissions problem that changed after the SDK was started.
@@ -227,7 +227,7 @@ class CredentialStore(object):
                     details=f"Unable to write certificates to the device: {e}."
                 )
 
-            self._topics = Topics(self.connection_settings.device_id, pair_response.host_settings)
+            self._topics = Topics(self.connection_settings.device_id, auth_response.host_settings)
 
     def rotate_certs(self, certs_rotate: CertRotate) -> bool:
         """

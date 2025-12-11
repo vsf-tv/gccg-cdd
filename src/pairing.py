@@ -67,7 +67,7 @@ class Pairing(object):
 
         now = int(time.time())
         diff = now - self.start_time
-        if diff > self.pair_response.host_settings.pairing_timeout_seconds:
+        if diff > self.pair_response.pairing_timeout_seconds:
             logger.info(f"Pairing Expired.")
             return True
         return False
@@ -86,7 +86,7 @@ class Pairing(object):
             return 0
         now = int(time.time())
         return max(
-            0, self.pair_response.host_settings.pairing_timeout_seconds - (now - self.start_time)
+            0, self.pair_response.pairing_timeout_seconds - (now - self.start_time)
         )
 
     def get_new_pairing_code(self):

@@ -31,7 +31,7 @@ class Topics(object):
         logger.info(f"Host Settings: {host_settings}")
         self.device_id = device_id
         try:
-            # Subscribe: receiving schema-compliant configuration messages. (persistent topic)
+            # Subscribe: receiving schema-compliant desired configuration messages. (persistent topic)
             self.update_configuration = host_settings.sub_update_topic
 
             # Subscribe: informs the client about the most current certs available. (persistent topic)
@@ -49,13 +49,16 @@ class Topics(object):
             # Publish: sending status to the service.
             self.report_status = host_settings.pub_report_status_topic
 
-            # Publish:  application requests deprovision, inform the service
+            # Publish: sending actual configuration to the service.
+            self.report_actual_configuration = host_settings.pub_report_actual_configuration_topic
+
+            # Publish: application requests deprovision, inform the service
             self.deprovision_inform_service = host_settings.pub_deprovision_topic
 
             # Subscribe: service requests deprovision, inform the client (persistent topic)
             self.deprovision_inform_client = host_settings.sub_deprovision_topic
 
-            # Subscribe:  informs the client about the current log subscription (persistent topic)
+            # Subscribe: informs the client about the current log subscription (persistent topic)
             self.update_log = host_settings.sub_update_log_subscription_topic
 
             logger.info(f"Topics: Sub: {self.update_configuration}")
@@ -64,6 +67,7 @@ class Topics(object):
             logger.info(f"Topics: Pub: {self.report_schema}")
             logger.info(f"Topics: Pub: {self.report_registration}")
             logger.info(f"Topics: Pub: {self.report_status}")
+            logger.info(f"Topics: Pub: {self.report_actual_configuration}")
             logger.info(f"Topics: Pub: {self.deprovision_inform_service}")
             logger.info(f"Topics: Sub: {self.deprovision_inform_client}")
             logger.info(f"Topics: Pub: {self.update_log}")

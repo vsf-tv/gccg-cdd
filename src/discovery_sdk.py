@@ -42,6 +42,7 @@ from models import (
     ConnectResponse,
     DisconnectResponse,
     ReportStatusResponse,
+    ReportConfigurationResponse,
     GetConfigurationResponse,
     DeprovisionResponse
 )
@@ -50,7 +51,7 @@ from service_api_models import DeprovisionMessage, CertRotate, LogRequest, Repor
 from utils import upload_file
 
 from utils import (
-    PublishThrottle,
+    Throttle,
     publish_message,
     validate_path_exists_and_writeable,
     ssl_alpn
@@ -118,10 +119,6 @@ class CddSdk(object):
         self.state = States.DISCONNECTED
         self.host_id: str = ""
         self.api_lock = Lock()
-        self.throttle = PublishThrottle(
-            interval_seconds=1
-        )  # Is reset to host-settings when available.
-
         # Validate we can write certs to the certs_path: Raise Exception.
         validate_path_exists_and_writeable(certs_path)
         # Validate the registration file against the registration-schema
@@ -143,6 +140,7 @@ class CddSdk(object):
         Disconnects from the current host if CONNECTED and places in the DISCONNECTED state.
         Resets all settings related to the host and prepares the SDK to make a new connection.
         """
+        self._initialize_throttles(1)
         self.host_id = None  # Unsetting host_id indicates host is no longer/not initialized.
         self.certs = None
         self.logger.update_device_id("")
@@ -154,6 +152,14 @@ class CddSdk(object):
             self.mqtt_client.disconnect()
             self.mqtt_client.loop_stop()
         self.mqtt_client = None
+
+    def _initialize_throttles(self, interval_seconds: int):
+        self.status_throttle = Throttle(
+            pub_min_interval=interval_seconds
+        )
+        self.config_throttle = Throttle(
+            pub_min_interval=interval_seconds
+        )
 
     def _initialize_host(self, host_id):
         """
@@ -254,9 +260,7 @@ class CddSdk(object):
                             self._load_certs()
                     ):  # Any hard failure will raise an exception.
                         # Reset the throttle to service-settings expectations.
-                        self.throttle = PublishThrottle(
-                            interval_seconds=self.certs.host_settings.min_interval_pub_seconds
-                        )
+                        self._initialize_throttles(self.certs.host_settings.min_interval_pub_seconds)
                         return self._start_connect()
 
                     # Should never happen. Auth was successful: _load_certs() should pass or raise an exception
@@ -279,8 +283,8 @@ class CddSdk(object):
                 # device has been claimed and authentication succeeded. Connect now.
                 if self._load_certs():
                     # Reset the throttle to service-settings expectations.
-                    self.throttle = PublishThrottle(
-                        interval_seconds=self.certs.host_settings.min_interval_pub_seconds
+                    self.throttle = Throttle(
+                        pub_min_interval=self.certs.host_settings.min_interval_pub_seconds
                     )
                     return self._start_connect()
 
@@ -495,15 +499,6 @@ class CddSdk(object):
         with self.api_lock:
             logger.info("Report Status")
 
-            def check_connected():
-                if not self._is(States.CONNECTED):
-                    raise ReportStatusError("Can only Report Status while CONNECTED")
-
-            def check_throttle():
-                if not self.throttle.can_publish():
-                    logger.info("ReportStatus throttled")
-                    raise ClientAPIThrottle("Request: report_status")
-
             def validate_and_publish():
                 try:
                     # Validate the status message against the status-schema
@@ -513,10 +508,13 @@ class CddSdk(object):
                     logger.exception(f"Invalid status payload: {e}")
                     raise InvalidStatusMessageError(str(e))
 
+                # This should never happen since the state must be CONNECTED.
+                topics = self.certs.get_topics()
+
                 # Publish the actual message
                 try:
                     status_message = ReportMessage(message=payload)
-                    self._do_publish_status_message(status_message)
+                    self._do_publish_message(status_message, topics.report_status)
                 except Exception as e:
                     logger.exception(f"Can't publish status. Msg: {e}")
                     raise e
@@ -525,8 +523,7 @@ class CddSdk(object):
             success, message, exception = True, "Status update sent", None
 
             try:
-                check_connected()
-                check_throttle()
+                self._can_publish_now(self.status_throttle)
                 validate_and_publish()
             except ClientAPIThrottle as e:
                 success, message, exception = False, "Throttled: too many requests", e
@@ -541,28 +538,83 @@ class CddSdk(object):
             return ReportStatusResponse(success=success, state=self.state,
                                         message=message, exception=exception)
 
+    def report_configuration(self, payload: dict) -> ReportConfigurationResponse:
+        """
+        Report the actual (current device state) configuration-schema compliant payload to the host service:
+        Nominally a device should apply the configuration returned from get_configuration() API request.
+        However, circumstances might result in a difference such as 1) A local device-user override. 2) One or more
+        fields in the desired configuration could not be applied or a delay in applying.
+
+        Publishing is rate-limited (See Throttle).
+        Service will handle throttling enforcement by disconnecting or revoking the device if this is a problem.
+
+        Returns a ReportConfigurationResponse()
+                     success: True | False
+                     state: = <see States above> # CONNECTED, DISCONNECTED, PAIRING, ....
+                     message: "<A text based informative response>",
+
+        Raises:
+            None
+
+        Note:
+            This function may construct an exception to inform the Response() but will not raise them unhandled.
+        """
+        # APIs requests should not be called asynchronously.
+        with self.api_lock:
+            logger.info("Report Configuration")
+
+            def validate_and_publish():
+                try:
+                    # Validate the actual schema message against the status-schema
+                    self.schema_registry.validate_configuration(payload=payload)
+                except Exception as e:
+                    # Report failure to service (original behavior)
+                    logger.exception(f"Invalid configuration payload: {e}")
+                    raise InvalidConfigurationError(str(e))
+
+                # Publish the actual message
+                try:
+                    config_message = ReportMessage(message=payload)
+                    self._do_publish_message(config_message, self.certs.get_topics().report_actual_configuration)
+                except Exception as e:
+                    logger.exception(f"Can't publish configuration. Msg: {e}")
+                    raise e
+
+            # Execute chain
+            success, message, exception = True, "Configuration update sent", None
+
+            try:
+                self._can_publish_now(self.config_throttle)
+                validate_and_publish()
+            except ClientAPIThrottle as e:
+                success, message, exception = False, "Throttled: too many requests", e
+            except ReportStatusError as e:
+                success, message, exception = False, "Configuration update not sent", e
+            except InvalidConfigurationError as e:
+                success, message, exception = False, "Configuration Send Failed. Schema Validation Failure", e
+            except Exception as e:
+                logger.exception(f"Error in report_configuration: {e}")
+                success, message, exception = False, f"Configuration update not sent: {e}", e
+
+            return ReportConfigurationResponse(success=success, state=self.state,
+                                        message=message, exception=exception)
+
+
     #
     # PRIVATE METHODS ---------------------------------------------------
     #
-    def _do_publish_status_message(self, status_message: ReportMessage):
+    def _do_publish_message(self, message: ReportMessage, topic: str):
 
-        # Publish schema is attempted immediately on on_connect() callback.
-        # If that failed, we can try again here and if it fails again we can inform the client.
+        # Publish registration is attempted immediately on on_connect() callback.
+        # Can retry here in case that asynchronous attempt failed.
         if not self._registration_delivered:
-            logger.info("Attempting to re-publish schema")
-            self._report_registration()
-
-        # This should never happen since the state must be CONNECTED.
-        topics = self.certs.get_topics()
-        if not topics or not self.mqtt_client:
-            raise ReportStatusError(
-                details="Skipping publish while not CONNECTED"
-            )
+            logger.info("Attempting to re-publish registration")
+            self._registration_delivered = self._report_registration()
 
         publish_message(
             client=self.mqtt_client,
-            topic=topics.report_status,
-            payload=json.dumps(cattr.unstructure(status_message)),
+            topic=topic,
+            payload=json.dumps(cattr.unstructure(message)),
             qos=0,
             retain=False,
         )
@@ -883,8 +935,9 @@ class CddSdk(object):
             raise ReportSchemaError(details=str(e)) from e
 
         # Informs the class this has been done and need not be re-sent.
-        self._registration_delivered = True
-        logger.info("Schema delivered")
+        logger.info("Registration delivered")
+        return True
+
 
     def _is(self, state):
         # Differentiating CONNECTED from RECONNECTING is important to the client,
@@ -1014,7 +1067,6 @@ class CddSdk(object):
             raise DeprovisionError(details=str(e)) from e
 
 
-
     def _delete_credentials(self, host_id: str):
         # when not connected just
         if not self.host_id or self.host_id == host_id:
@@ -1024,3 +1076,12 @@ class CddSdk(object):
 
     def _connected_to(self, host_id: str):
         return self._is(States.CONNECTED) and host_id == self.host_id
+
+
+    def _can_publish_now(self, throttle: Throttle):
+        if not self._is(States.CONNECTED):
+            raise ClientAPIThrottle("Must be CONNECTED to publish message to host.")
+
+        if not throttle.can_publish():
+            logger.info("Publish was throttled")
+            raise ClientAPIThrottle()

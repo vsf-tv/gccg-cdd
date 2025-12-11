@@ -221,6 +221,8 @@ class DeprovisionResponse(Response):
 class ReportStatusResponse(Response):
     pass
 
+class ReportConfigurationResponse(Response):
+    pass
 
 class GetConfigurationResponse(Response):
     """
