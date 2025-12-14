@@ -4,7 +4,7 @@ import logging
 import json
 import time
 from enum import Enum
-from typing import Dict
+from typing import Dict, Optional
 
 
 def not_empty(instance, attribute, value):
@@ -55,6 +55,9 @@ class HostSettings:
     pub_report_status_topic: str = attr.field(
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
+    pub_report_actual_configuration_topic: str = attr.field(
+        validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
+    )
     sub_update_certs_topic: str = attr.field(
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
@@ -99,8 +102,7 @@ class PairResponse:
     access_code: str = attr.field(
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
-    host_settings: HostSettings = attr.field(validator=attr.validators.instance_of(HostSettings))
-
+    pairing_timeout_seconds: int = attr.field(validator=attr.validators.instance_of(int))
 
 
 @attr.define
@@ -118,20 +120,17 @@ class AuthRequest:
         validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
     )
 
-
 @attr.define
 class AuthResponse:
     """
     Host Service API defines the following payload for Authentication response
     """
-    status: str = attr.field(
-        validator=attr.validators.and_(attr.validators.instance_of(str), not_empty)
-    )
-    ca_cert: str = attr.field(validator=attr.validators.instance_of(str))
-    device_cert: str = attr.field(validator=attr.validators.instance_of(str))
-    MQTTUri: str = attr.field(validator=attr.validators.instance_of(str))
-    region: str = attr.field(validator=attr.validators.instance_of(str))
-
+    status: str = attr.field(validator=attr.validators.and_(attr.validators.instance_of(str), not_empty))
+    ca_cert: str = attr.field(default="", validator=attr.validators.instance_of(str))
+    device_cert: str = attr.field(default="", validator=attr.validators.instance_of(str))
+    MQTTUri: str = attr.field(default="", validator=attr.validators.instance_of(str))
+    region: str = attr.field(default="", validator=attr.validators.instance_of(str))
+    host_settings: Optional[HostSettings] = attr.field(default=None, validator=attr.validators.optional(attr.validators.instance_of(HostSettings)))
 
 @attr.define
 class ConnectionSettings:

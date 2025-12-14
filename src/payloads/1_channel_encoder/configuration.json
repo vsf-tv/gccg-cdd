@@ -15,10 +15,10 @@
       "connection": {
         "transport_protocol": {
           "srt_caller": {
-            "ip": "10.10.1.100",
+            "ip": "3.213.165.124",
             "port": 2001,
             "latency_ms": 150,
-            "stream_id": "contribution123",
+            "stream_id": "discovery1",
             "encryption": {
             }
           }

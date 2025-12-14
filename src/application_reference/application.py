@@ -35,6 +35,7 @@ PORT: int = 8603  # Ensure this matches the port used to start the discovery cli
 CONNECT = f"http://127.0.0.1:{PORT}/connect"
 DISCONNECT = f"http://127.0.0.1:{PORT}/disconnect"
 REPORT_STATUS = f"http://127.0.0.1:{PORT}/report_status"
+REPORT_ACTUAL_CONFIGURATION = f"http://127.0.0.1:{PORT}/report_actual_configuration"
 GET_CONFIGURATION = f"http://127.0.0.1:{PORT}/get_configuration"
 DEPROVISION = f"http://127.0.0.1:{PORT}/deprovision"
 
@@ -346,12 +347,48 @@ class ClientApplication(object):
         else:
             print(f"report_status Failed: {response.status_code} {response.text}")
 
-    def get_configuration(self):
+    def report_actual_configuration(self):
+        """
+        Reports the actual configuration of the system.  This function informs the
+        service which (ideally all) of the host-provided configuration has been
+        actually applied to the device settings.
+
+        The CDD Protocol explicitly requires the client system apply all desired configuration params
+        and disallow local overrides while connected.
+
+        The host service will treat all differences as:
+        1. The device is offline
+        2. The desired configuration is being applied but hasn't yet (control latency)
+        3  A Error: the device is unable to accept the configuration.
+
+        Host service will not want to assume any responsibility for (3) since practically there is
+        nothing to be done as this is a device control plane defect.
+
+        """
+
+        # For this simple example application: we will just reflect the desired back.  An actual device
+        # should create a complete configuration payload from the current state of the device config.
+        if not self.current_configuration:
+            print("No configuration to report")
+            return
+
+        response = requests.put(REPORT_ACTUAL_CONFIGURATION, json=self.current_configuration, timeout=5)
+        if response.status_code == 200:
+            sdk_response = parse_api_response(response)
+            print(
+                f"report_actual_configuration Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
+                f" error: {sdk_response.get('error')}  message: {sdk_response.get('message')}"
+            )
+        else:
+            print(f"report_actual_configuration Failed: {response.status_code} {response.text}")
+
+    def get_configuration(self) -> str:
         """
         Obtains a configuration message.
         Checks if the update_id changed, if so applies the change, otherwise ignores.
         """
         response = requests.get(GET_CONFIGURATION, timeout=5)
+        update_id: str = ""
         if response.status_code == 200:
             sdk_response = parse_api_response(response)
             print(
@@ -378,6 +415,8 @@ class ClientApplication(object):
                 # via the report_status() API.
                 # See: Host Service API: configuration: desired/actual.
                 self.current_configuration = configuration_payload
+
+        return update_id
 
     def run_loop(self, host_id: str):
         """
@@ -469,8 +508,16 @@ class ClientApplication(object):
                     ]:  # See (SDK models.py).
                         # The service will respond for any state but best to only call these when the SDK is CONNECTED
                         # so that messages sent/received are handled and current.
-                        self.get_configuration()
+                        update_id = self.get_configuration()
+
+                        # Be careful here...the SDK and Service will throttle if you exceed pub limits.
+                        # This application calls pub every 3 seconds, which requires a host min pub interval < 3s
+                        # The VSF test host min pub interval is 5s.
+                        # This application will only call report_status() when something interesting has changed.
+                        # Consider that minor differences like a small temp/bitrate change is probably not worth reporting.
+                        # See: report_status() API guidance.
                         self.report_status()
+                        self.report_actual_configuration()
 
                 else:
                     print(f"Connection failed. Status code: {response.status_code}")

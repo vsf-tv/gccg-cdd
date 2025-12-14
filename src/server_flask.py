@@ -125,6 +125,15 @@ class APIServer:
                 .to_dict()
             )
 
+        @self.app.route("/report_actual_configuration", methods=["PUT"])
+        def report_configuration():
+            payload = request.get_json()
+            return jsonify(
+                self.sdk_manager.get_client()
+                .report_configuration(payload=payload)
+                .to_dict()
+            )
+
         @self.app.route("/get_configuration", methods=["GET"])
         def get_configuration():
             return jsonify(self.sdk_manager.get_client().get_configuration().to_dict())
