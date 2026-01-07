@@ -4,9 +4,9 @@
       "id": "CH01",
       "state": "ACTIVE",
       "settings": [
-        { "id": "RS01", "value": "1920x1080" },
-        { "id": "FR01", "value": "60" },
-        { "id": "CBR1", "value": 8000 },
+        { "id": "RS01", "value": "1920x1080"},
+        { "id": "FR01", "value": "60"},
+        { "id": "CBR1", "value": "8000" },
         { "id": "INP", "value": "SDI1"}
       ],
       "setting_profile": {

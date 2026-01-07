@@ -36,6 +36,7 @@ The following python external packages are required
 - referencing
 
 
+
 ## System Requirements
 - Python 3.12 or newer
 - RAM: SDK Consumes around 37MB
@@ -201,6 +202,21 @@ reference design.
 Step 0:
 ```bash
 Install python 3.12 or greater on your system
+
+Option: You can build language specific client SDKs: C++, Python, Typescript
+    This option produces:
+      API request/response models that perform serialize & deserialize and validation of SDK API calls
+      Http Request that handle calling the SDK Rest API using the above models for the request & response.
+    
+    The benefit is a large savings in integration time and application resiliency.
+    
+    > brew install smithy 
+    > smithy build
+    > ./generate-sdk.sh [cpp-restsdk|python|typescript]
+    
+    Output created in: gccg-cdd/generated-sdk/  
+    Include/Import the above into your application.  
+    
 ```
 
 Step 1:
