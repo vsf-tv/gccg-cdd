@@ -31,7 +31,7 @@ INITIAL_CONFIG_ID = ""  # identical to the SDK initial configuration update_id w
 
 
 # Client API endpoints.
-PORT: int = 8603  # Ensure this matches the port used to start the discovery client SDK.
+PORT: int = 8604  # Ensure this matches the port used to start the discovery client SDK.
 CONNECT = f"http://127.0.0.1:{PORT}/connect"
 DISCONNECT = f"http://127.0.0.1:{PORT}/disconnect"
 REPORT_STATUS = f"http://127.0.0.1:{PORT}/report_status"

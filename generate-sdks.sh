@@ -4,7 +4,7 @@ set -e
 # Variables
 SMITHY_SERVICE="ConfigurationService"
 OPENAPI_SPEC="build/smithy/source/openapi/${SMITHY_SERVICE}.openapi.json"
-OUTPUT_DIR="./generated-sdk"
+OUTPUT_DIR="./src/generated_sdk"
 LANGUAGES=("cpp-restsdk" "python" "typescript")
 
 # Check arguments
@@ -35,10 +35,16 @@ fi
 
 # 3. Generate SDK
 echo "🛠️  Generating $LANG SDK..."
+if [ "$LANG" = "python" ]; then
+    OUTPUT_PATH="./src/generatedSDKPython"
+else
+    OUTPUT_PATH="$OUTPUT_DIR/$LANG"
+fi
+
 openapi-generator generate \
     -i "$OPENAPI_SPEC" \
     -g "$LANG" \
-    -o "$OUTPUT_DIR/$LANG" \
+    -o "$OUTPUT_PATH" \
     --additional-properties=projectName="${SMITHY_SERVICE}SDK"
 
-echo "✅ Done! $LANG SDK is in $OUTPUT_DIR/$LANG"
+echo "✅ Done! $LANG SDK is in $OUTPUT_PATH"

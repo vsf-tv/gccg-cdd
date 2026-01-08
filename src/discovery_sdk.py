@@ -46,6 +46,7 @@ from models import (
     GetConfigurationResponse,
     DeprovisionResponse
 )
+from model_validator import validate_configuration
 from schema_utils import SchemaRegistry
 from service_api_models import DeprovisionMessage, CertRotate, LogRequest, ReportMessage, DeprovisionReason
 from utils import upload_file
@@ -567,6 +568,11 @@ class CddSdk(object):
                 try:
                     # Validate the actual schema message against the status-schema
                     self.schema_registry.validate_configuration(payload=payload)
+
+                    # Check the smithy-generated configuration model in ../generated-sdk/python/openapi_client/models
+                    result, exp = validate_configuration(payload)
+                    logger.info(f"Validated by Model: {result}, {exp}")
+
                 except Exception as e:
                     # Report failure to service (original behavior)
                     logger.exception(f"Invalid configuration payload: {e}")
