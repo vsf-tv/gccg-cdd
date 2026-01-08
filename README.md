@@ -214,7 +214,7 @@ Option: You can build language specific client SDKs: C++, Python, Typescript
     > smithy build
     > ./generate-sdk.sh [cpp-restsdk|python|typescript]
     
-    Output created in: gccg-cdd/generated-sdk/  
+    Output created in: gccg-cdd/generatedSDK<language>/  
     Include/Import the above into your application.  
     
 ```
