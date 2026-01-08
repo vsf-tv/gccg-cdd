@@ -5,7 +5,7 @@ set -e
 SMITHY_SERVICE="ConfigurationService"
 OPENAPI_SPEC="build/smithy/source/openapi/${SMITHY_SERVICE}.openapi.json"
 OUTPUT_DIR="./src/generated_sdk"
-LANGUAGES=("cpp-restsdk" "python" "typescript")
+LANGUAGES=("cpp-restsdk" "python" "typescript" "cpp-tiny" "cpp-oatpp-client")
 
 # Check arguments
 if [ $# -ne 1 ]; then

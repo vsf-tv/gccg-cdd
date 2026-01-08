@@ -212,10 +212,15 @@ Option: You can build language specific client SDKs: C++, Python, Typescript
     
     > brew install smithy 
     > smithy build
-    > ./generate-sdk.sh [cpp-restsdk|python|typescript]
+    > ./generate-sdk.sh [|python|typescript|cpp-tiny|cpp-aotapp-client|cpp-restsdk]
     
     Output created in: gccg-cdd/generatedSDK<language>/  
     Include/Import the above into your application.  
+    
+    A word on the c++ options:
+    cpp-tiny: Depends on lib curl and others but small and portable
+    cpp-aotapp-client: No dependencies and very portable
+    cpp-restsdk: depends on boost and may not be desired for embedded devices.
     
 ```
 
