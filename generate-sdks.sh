@@ -2,10 +2,13 @@
 set -e
 
 # Variables
-SMITHY_SERVICE="ConfigurationService"
+SMITHY_SERVICE="CddService"
+INTERNAL_SERVICE="HostServiceApi"
 OPENAPI_SPEC="build/smithy/source/openapi/${SMITHY_SERVICE}.openapi.json"
-OUTPUT_DIR="./src/generated_sdk"
-LANGUAGES=("cpp-restsdk" "python" "typescript" "cpp-tiny" "cpp-oatpp-client")
+INTERNAL_SPEC="build/smithy/source/openapi/${INTERNAL_SERVICE}.openapi.json"
+OUTPUT_DIR="./src/generatedSDK"
+INTERNAL_OUTPUT_DIR="./src/generatedSDKInternal"
+LANGUAGES=("cpp-restsdk" "python" "typescript" "cpp-tiny" "cpp-oatpp-client" "golang")
 
 # Check arguments
 if [ $# -ne 1 ]; then
@@ -23,28 +26,57 @@ if [[ ! " ${LANGUAGES[*]} " =~ " ${LANG} " ]]; then
     exit 1
 fi
 
-# 1. Build the Smithy model
-echo "🚀 Building Smithy model..."
+# 1. Build the Smithy models
+echo "🚀 Building Smithy SDK model..."
 smithy build
 
-# 2. Check for spec
+echo "🚀 Building Smithy Internal model..."
+smithy build --config smithy-build-internal.json
+
+# 2. Check for specs
 if [ ! -f "$OPENAPI_SPEC" ]; then
     echo "❌ Error: OpenAPI spec not found at $OPENAPI_SPEC"
     exit 1
 fi
 
-# 3. Generate SDK
-echo "🛠️  Generating $LANG SDK..."
-if [ "$LANG" = "python" ]; then
-    OUTPUT_PATH="./src/generatedSDKPython"
-else
-    OUTPUT_PATH="$OUTPUT_DIR/$LANG"
+if [ ! -f "$INTERNAL_SPEC" ]; then
+    echo "❌ Error: Internal OpenAPI spec not found at $INTERNAL_SPEC"
+    exit 1
 fi
 
-openapi-generator generate \
-    -i "$OPENAPI_SPEC" \
-    -g "$LANG" \
-    -o "$OUTPUT_PATH" \
-    --additional-properties=projectName="${SMITHY_SERVICE}SDK"
+# 3. Generate SDK models
+OUTPUT_PATH="$OUTPUT_DIR$LANG"
+echo "📦 Generating SDK models..."
+if [ "$LANG" = "python" ]; then
+    openapi-generator generate \
+        -i "$OPENAPI_SPEC" \
+        -g "$LANG" \
+        -o "$OUTPUT_PATH" \
+        --additional-properties=projectName="${SMITHY_SERVICE}SDK",packageName=openapi_client
+else
+    openapi-generator generate \
+        -i "$OPENAPI_SPEC" \
+        -g "$LANG" \
+        -o "$OUTPUT_PATH" \
+        --additional-properties=projectName="${SMITHY_SERVICE}SDK"
+fi
 
-echo "✅ Done! $LANG SDK is in $OUTPUT_PATH"
+# 4. Generate Internal models
+INTERNAL_OUTPUT_PATH="$INTERNAL_OUTPUT_DIR$LANG"
+echo "📦 Generating Internal models..."
+if [ "$LANG" = "python" ]; then
+    openapi-generator generate \
+        -i "$INTERNAL_SPEC" \
+        -g "$LANG" \
+        -o "$INTERNAL_OUTPUT_PATH" \
+        --additional-properties=projectName="${INTERNAL_SERVICE}SDK",packageName=internal_api_client
+else
+    openapi-generator generate \
+        -i "$INTERNAL_SPEC" \
+        -g "$LANG" \
+        -o "$INTERNAL_OUTPUT_PATH" \
+        --additional-properties=projectName="${INTERNAL_SERVICE}SDK"
+fi
+
+echo "✅ Done! SDK is in $OUTPUT_PATH"
+echo "✅ Done! Internal SDK is in $INTERNAL_OUTPUT_PATH"

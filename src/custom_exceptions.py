@@ -22,6 +22,8 @@
 
 """
 from custom_logger import logger
+from typing import Optional
+from openapi_client.models.error_details import ErrorDetails
 
 
 class SDKBaseException(Exception):
@@ -73,7 +75,7 @@ class ClientAPIThrottle(SDKBaseException):
 #
 
 
-# Can not connect to the service MQTT broker, likely a network issue.
+# Cannot connect to the service MQTT broker, likely a network issue.
 class ConnectError(SDKBaseException):
     def __init__(self, details=""):
         message = "Connection error (MQTT)."
@@ -104,6 +106,20 @@ class PairingError(SDKBaseException):
         message = "Unknown pairing failure."
         super().__init__(message, details)
 
+class PairingCompatibilityVersionError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Tr12 version not supported"
+        super().__init__(message, details)
+
+class PairingCompatibilityDeviceTypeError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Device type not supported"
+        super().__init__(message, details)
+
+class PairingCompatibilityHostIDError(SDKBaseException):
+    def __init__(self, details=""):
+        message = "Host ID does not match the Host endpoint"
+        super().__init__(message, details)
 
 # The pairing service return 5xx.
 class PairingServiceError(SDKBaseException):
@@ -200,7 +216,7 @@ class ReportStatusError(SDKBaseException):
         super().__init__(message, details)
 
 
-class ReportSchemaError(SDKBaseException):
+class ReportRegistrationError(SDKBaseException):
     def __init__(self, details=""):
         message = "Publish: Report schema failed."
         super().__init__(message, details)
@@ -275,3 +291,22 @@ class DeprovisionError(SDKBaseException):
     def __init__(self, details=""):
         message = "Unknown Deprovision error."
         super().__init__(message, details)
+
+
+def exception_to_error_details(exception: Optional[Exception]) -> Optional[ErrorDetails]:
+    """
+    Convert a Python exception to an ErrorDetails Pydantic model.
+
+    Args:
+        exception: Python exception with optional 'message' and 'details' attributes
+
+    Returns:
+        ErrorDetails model or None if exception is None
+    """
+    if exception is None:
+        return None
+    return ErrorDetails.from_dict({
+        "type": exception.__class__.__name__,
+        "message": getattr(exception, 'message', str(exception)),
+        "details": getattr(exception, 'details', str(exception))
+    })

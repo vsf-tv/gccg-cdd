@@ -1,17 +1,22 @@
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'generatedSDKPython'))
 
-from openapi_client.models.channel_configuration import ChannelConfiguration
-from openapi_client.models.router_device_configuration import RouterDeviceConfiguration
-from openapi_client.models.channel_state import ChannelState
-from openapi_client.models.connection import Connection
-from openapi_client.models.transport_protocol import TransportProtocol
+# Generated model imports
+from openapi_client.models.device_registration import DeviceRegistration
+from openapi_client.models.device_status import DeviceStatus
+from openapi_client.models.device_configuration import DeviceConfiguration
 
+"""
+Exceptions will be raised if unable to deserialize into the TR12 models.
+"""
+def validate_configuration(data_dict: dict) -> DeviceConfiguration:
+    # Pydantic handles both camelCase and snake_case via aliases
+    return DeviceConfiguration.from_dict(obj=data_dict)
 
-def validate_configuration(data_dict: dict):
-    try:
-        model_instance = RouterDeviceConfiguration.from_dict(obj=data_dict)
-        return True, None
-    except Exception as e:
-        return False, str(e)
+def validate_status(data_dict: dict) -> DeviceStatus:
+    # Pydantic handles both camelCase and snake_case via aliases
+    return DeviceStatus.from_dict(obj=data_dict)
+
+def validate_registration(data_dict: dict) -> DeviceRegistration:
+    # Pydantic handles both camelCase and snake_case via aliases
+    reg = DeviceRegistration.from_dict(obj=data_dict)
+    return reg
+

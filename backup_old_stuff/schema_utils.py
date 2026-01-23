@@ -41,11 +41,9 @@ class SchemaRegistry(object):
         self.configuration_schema = self.load_json_file(self.configuration_schema_file)
         self.status_schema = self.load_json_file(self.status_schema_file)
 
-    def validate_registration_file(self, file: str):
-        # Validate the registration schema against the metaschema
-        payload = self.load_json_file(file)
+    def validate_registration(self, payload: dict):
+        # Validate the registration  against the schema
         validate(instance=payload, schema=self.registration_schema)
-
         print("Registration schema is valid.")
 
     def validate_configuration(self, payload: dict):

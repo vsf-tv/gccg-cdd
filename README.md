@@ -1,4 +1,4 @@
-# Client Device Discovery (CDD) Client SDK 
+# Client Device Discovery (CDD) Client SDK: TR12
 Discovery, monitoring and connection management of streaming video devices using an internet-secure, cloud 
 and NAT friendly, scalable, pairing and communication protocol.
 
@@ -7,24 +7,57 @@ For access, please reach out to Brad Gilmer <brad@gilmer.tv> or Brian Rundle <br
 
 ## Introduction
 CDD solves for discovering, managing and monitoring video devices from a scalable cloud service.
-Customers tell us that the hardest part of cloud workflows is often getting their live signals connected 
-in the first place. While there are many transport protocols available for securely streaming 
-video (SRT, RIST, TR-07, etc), customers need to manually manage and monitor remote device access, correctly perform 
-stream setup, including IP address, encryption keys and overcome networking obstacles like firewalls, 
-network address translation and security groups.
+The hardest part of cloud workflows is often getting live signals connected to the cloud
+in the first place. 
 
-We have started an activity group with the Video Services Forum (VSF) to develop a technical recommendation 
-and an open-source SDK application providing device discovery, authentication and connection management 
-that works with any transport protocol.
+While there are many transport protocols available for securely streaming 
+video (SRT, RIST, TR-07, etc), video production and distribution workflows that involve distributed
+sources and destinations still need to be manually managed and monitored. Today, accessing devices
+in distributed facilities requires cumbersome and not-scalable approaches like VPN tunneling, 
+looking up devices by IP address, accees via usernames/passwords on a locally hosted console UIs.
+
+CDD provides a mechanism to securely pair/discover devices into a (cloud) registry. Once connected,
+a CDD enabled device can be managed and monitored anywhere in the world across the open internet. The
+CDD protocol uses modern, cloud-first solutions for security, modeling, validation, and resource
+lifecycle and applies those concepts for video streaming devices. A device can install the SDK, and
+using the provided models, quickly integrate with the device's native control plane. A device user
+can enable/disable the SDK, pair with a (cloud) host service of their choice and immediately have
+persistent, portable access via that service. A CDD host service will support all CDD devices. 
+The protocol solves for the widely differentiated settings (think codec, channels, etc) available from
+different device types (encoders, decoders, cameras, playout devices) from different manufactures.
+Devices can expose completely customized settings within the protocol's structure.   
+
+CDD is a protocol that defines APIs (request/response) between clients (devices) and
+host service. The SDK provided in this repository implements a CDD client. This repository 
+also includes and Application Reference Design (ARD) to simulate a 1-channel encoder devices that integrates
+the CDD SDK Client. Also provided is a cloud host service for testing. Using this readme, you should be able 
+to install and test the ARD/SDK against with the VSF cloud endpoint in under 30 minutes. 
+The VSF host service (deployed in AWS) has APIs for pair/describe/deprovision/configure/get thumbnails. 
+
+Finally, this repository does not provide code for a CDD host service. In practice, modern cloud infrastructure
+is highly differentiated between vendors and platforms. The ultimate goal for CDD is a concise TR12 specification
+that results in an ecosystem of CDD production cloud services.    
+
+## TR12 Protocol
+
+1) Smithy Models (src/models) http/mqtt request/response models. 
+2) The TR12 Protocol document available: http:<vsf> defines additional client/service requirements.
+
+## Architecture
+The SDK client provided in this repo is a python process hosting a Rest API on localhost. The device application uses the 
+generated models (provided for most languages) for creating API requests, handling API responses to the SDK
+process.  The SDK handles connecting and communicating the host service via http and mqtt. 
+equires https/Port 443 outbound access.
+No other firewall, port forwarding is required. Possibly a containerized version will be available soon. 
+
 
 ## Contents
 - CDD Client SDK 
 - Application reference design
 - Instructions for installation, and running the Application Reference Design and CDD SDK. 
 
-
 ## Python External Dependencies
-The following python external packages are required
+The CDD SDK here implemented in python. The following python external packages are required.
 - flask
 - jsonschema
 - paho.mqtt.client
@@ -34,20 +67,23 @@ The following python external packages are required
 - cattrs 
 - pytest 
 - referencing
+- urllib3
 
+## Build Dependency
+- build dependency: smithy/open-api
 
 
 ## System Requirements
-- Python 3.12 or newer
-- RAM: SDK Consumes around 37MB
-- File Read/Write
-
+- Python 3.12 or newer plus dependencies listed above
+- RAM: SDK Consumes around 60MB
+- File system: Persistent (across power cycles) Read/Write.  Minimal storage for credentials, optional logs.
 
 ## Security
-The SDK persists an identity and X509 credentials obtained during the pairing process in a path provided by the
-host-system (the device on which the SDK is installed). While the protocol implements rotation to limit certificate
-lifespan, securing credentials is the host-system's responsibility. The following are some best practices for
-embedded systems:
+The SDK persists an identity and X509 credentials (on disk) obtained during the pairing process in a path provided by the
+host service. While the protocol implements credential rotation to limit certificate lifespan, 
+securing credentials is the host-system's responsibility. 
+
+The following are some best security practices for embedded systems:
 - Verify Code Integrity: Allow only signed and trusted software run (bootloader, operating system, firmware).
 - Hardware Root of Trust: Utilize hardware-based security mechanisms.
    (like Secure Elements or Trusted Platform Modules - TPMs) to establish an immutable root of trust for the boot process.
@@ -57,37 +93,21 @@ embedded systems:
 - Regular Security Audits and Testing.
 
 
-### Work in progress...
-
-- Add unit and integration test
-- Fully Open Schema for configuration
-
-
-## Application Reference Design Prerequisite: FFMPEG
-To be clear, this is not a SDK requirement, but used by the Application Reference Design (ARD) to simulate an
-encoder device. Older versions of FFMPEG might not support SRT directly. Before proceeding, ensure it is
-installed and test it directly using the following CLI command.
-
-
-```bash
-Start an SRT listener endpoint and get the ip:port:stream_id params.  One convenient option is
-AWS Elemental Media Connect, but any SRT listener accessible by your system will do.
-```
-
-This configuration sets the device local web-cam as input (-i 0).  If a web-cam is not available on your system you
-can modify the following CLI and application.py to use an alternate input source.  
-
-On running the following, your web-cam should start, and video streamed via SRT to your SRT listener endpoint.
-```bash
+## Application Reference Design (ARD) Pre-Flight: FFMPEG
+Older versions of FFMPEG might not support SRT directly. Before proceeding, ensure ffmpeg is
+installed and test it directly using the following CLI command that connects a standard internal web-cam
+ streams via SRT to your SRT listener endpoint.  (You need to start the lister endpoint yourself)
+ 
 >ffmpeg -f avfoundation -framerate 30 -video_size 640x480 -i 0 -vcodec libx264 -f mpegts srt://{ip}:{port}/{stream_id}"
 >cont-c  # to stop the stream
-```
 
-## Application Reference Design Prerequisite: API Caller Application
-To be clear, this is not a SDK requirement, but used in the README instructions to make API calls on the VSF Host
-Service Test Endpoint.  In practice, a host service will provide its own API access mechanism, GUI, etc.
+
+## API Caller Application
+To test the SDK againt the VSF Test Host Service, we will need to make authenticated API calls on the VSF Host
+Service Endpoint. In production, a CDD host service will provide its own API access mechanism, GUI, etc.
+
 Download or use your favorite API Caller application such as Postman, Hoppscotch, Insomnia, etc.
-The application you chose must be able to make API calls formatted with headers for AWS Credentials
+The application you chose must be able to make API calls formatted with headers using AWS Credentials.
 We will use this API Caller application to interact with the VSF Host Test Endpoint, claim the device, get status
 and start, stop streaming.  
 
@@ -95,13 +115,16 @@ and start, stop streaming.
 ## Instructions
 
 Currently, the VSF Test Endpoint is available at the following URL. This may change or include new endpoints.
+This endpoint is not a production service and may be removed/replaced at any time. 
 > base_endpoint = https://v5v7zhbk3k.execute-api.us-east-1.amazonaws.com/dev
 
-### Create a cloud user/account.  
+## The VSF Test Host Service Endpoint
 
-The VSF Test Endpoint is NOT an AWS service.  It is a simple cloud application test endpoint reference created 
-and managed through the VSF strictly for CDD SDK testing and experiments.  It should never be used for production
-and is available for VSF members to quickly download and verify the functionality of their CDD SDK client. 
+** The VSF Test Endpoint is simply a testing tool privately vended by the VSF and is NOT an AWS service. **
+It should never be used for production and is available for VSF members to quickly download and verify the
+functionality of their CDD SDK client.
+
+## Create AWS Credentials to access the endpoint. 
 
 Step 0:
 ```bash
@@ -134,9 +157,9 @@ Step 1:
             "Effect": "Allow",
             "Action": "execute-api:Invoke",
             "Resource": [
-                "arn:aws:execute-api:us-east-1:484202305601:*/*/*",
-                "arn:aws:execute-api:us-east-1:484202305601:*/*/*/*",
-                "arn:aws:execute-api:us-east-1:484202305601:*/*/*/*/*"
+                "arn:aws:execute-api:*:484202305601:*/*/*",
+                "arn:aws:execute-api:*:484202305601:*/*/*/*",
+                "arn:aws:execute-api:*:484202305601:*/*/*/*/*"
             ]
         }
     ]
@@ -156,75 +179,112 @@ DiscoveryAPICallerPolicy should appear
     The IAM user: DiscoveryAPICaller should have the policy you set under the permissions tab.  
 ```
 
-Step 2:
+Step 2 
+Get Temporary Credentials (configurable 1-12 hours) to call the VSF host service API
 ```bash
- Get Credentials to make API calls on the VSF Host Service Endpoint using your favorite API-Client application.  
+ Log in to the AWS console as user: DiscoveryAPICaller
+
+ https://YOUR_ACCOUNT_ID.signin.aws.amazon.com/console
+ Click Switch Role.
+ Enter your Account ID, IAM user name: "DiscoveryAPICaller" and your password.
+
+Open the AWS Cloud Shell console.
+Verify your identity as: DiscoveryAPICaller
+> aws sts get-caller-identity
+
+Export Temporary Credentials:
+> aws configure export-credentials --format env
  
- Go to: https://us-east-1.console.aws.amazon.com/iam
- > Click: Users
- Find: DiscoveryAPICaller user you created above
- > Click: Security and Credentials Tab
- Under the Access keys box click: Create Access Key
- > Select: Other
- > Select: Next
- > Select: Create Access Key
- Retrieve and securely store both your AccessKey & SecretKey.
- *** You must copy the secret key here, it is available only once! ***
+ Retrieve: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN for use in calling the APIs below. 
+
+  
 ```
 
 Step 3
 ```bash
 Test calling the VSF Test Endpoint using DiscoveryAPICaller credentials. 
 
-You are going to call the "ListDevices" API.  Normally this will return all claimed/active devices.  Since we have not
-yet claimed any devices, it will return success and an empty list.  
+You are going to call the "ListDevices" API.  This returns all ACTIVE device in your cloud service registry.
+Since we have not yet claimed any devices into your repository, it will return success (200) and an empty list.  
 
-Create a GET request to: <base_endpoint>/dev/devices
-Under Authorization Tab: 
-Select: AWS Signature
-Enter your AccessKey and SecretKey from above.
+Create a Rest GET request to: "<base_endpoint>/devices"
+
+Authorization Type: Select: "AWS Signature" 
+Enter: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+Region: us-east-1
  
 Expected Response: 
 > A simple 200 response with an emtpy list 
 
-While not too exciting it does demonstrate you are successfully calling the VSF 
-test endpoint with a valid account!!
+While not too exciting, it does demonstrate you are successfully calling the VSF test endpoint with a valid AWS user!
 ```
-
 
 
 
 
 ### Install the SDK and Application Reference Design
-This instructions will show you how to download and install the SDK and the included application
-reference design.
+OK lets go back and install the SDK and get things working on the client/device side of things. 
 
 Step 0:
 ```bash
-Install python 3.12 or greater on your system
-
-Option: You can build language specific client SDKs: C++, Python, Typescript
-    This option produces:
-      API request/response models that perform serialize & deserialize and validation of SDK API calls
-      Http Request that handle calling the SDK Rest API using the above models for the request & response.
-    
-    The benefit is a large savings in integration time and application resiliency.
-    
-    > brew install smithy 
-    > smithy build
-    > ./generate-sdk.sh [|python|typescript|cpp-tiny|cpp-aotapp-client|cpp-restsdk]
-    
-    Output created in: gccg-cdd/generatedSDK<language>/  
-    Include/Import the above into your application.  
-    
-    A word on the c++ options:
-    cpp-tiny: Depends on lib curl and others but small and portable
-    cpp-aotapp-client: No dependencies and very portable
-    cpp-restsdk: depends on boost and may not be desired for embedded devices.
-    
+Requried:
+1) Install python 3.12 or greater on your system
+> python --version 
 ```
 
 Step 1:
+```bash
+2) Install Smithy
+
+   a) MAC > brew install smithy
+   b) LINUX/PC/Other: See: https://github.com/smithy-lang/smithy/  
+```
+
+Step 3:
+```bash
+Build the open-api models from the TR12 Smithy definitions.  
+
+This creates a python 'SDK'
+ - Models and Validators for the CDD SDK local APis
+ - Models and Validators for the TR12 Protocol 
+ 
+Createed in: 
+src/generatedSDKInternalpython 
+src/geberatedSDKpython 
+  
+  This uses smithy-build.json and smithy-build-internal.json
+   > cd <sdk root>
+   > smithy build 
+   > ./generate-sdk.sh python
+   > (Optional) /generate-sdk.sh <your application langauge>
+   
+  
+  
+  
+  
+
+```
+
+## TR12 Smithy/OpenAPI definition
+```bash
+The CDD SDK implements the TR12 protocol.  This means API calls to the service have defined request and reponse models.
+While those models could be defined as text or schema, modern APIs use frameworks that take a concise definition and 
+can automatically generate code needed to call those apis, construct valid request/response models in many different languages.
+
+CDD protocol is literally defined by a handful of SMITHY files in:  "src/models".  Not only does the ARD and CDD SDK use 
+these generated models to host the local rest API, but uses them to communicate with the host service.  
+Importantly, the device application integrating the SDK can also generate models in just about any language
+ required: C++, Python, Typescript and others.  Simply:  
+    > ./generate-sdk.sh [typescript|cpp-tiny|cpp-aotapp-client|cpp-restsdk]
+    
+    Output created in: gccg-cdd/generatedSDK<language>/  
+    
+    When it comes time to integrated the CDD SDK into your applicaiton, simply import the above dependencies into your application.  
+  
+There are a variety of supported languages.  See: https://github.com/smithy-lang/awesome-smithy
+```
+
+Step 4:
 ```bash
 Clone and cd into the CDD package
 > git clone https://github.com/vsf-tv/gccg-cdd
@@ -233,45 +293,36 @@ Clone and cd into the CDD package
 You should see a src/ dir and requirements.txt   
 ```
 
-Step 2:
+Step 5:
 ```bash
 nstall a python virtual environment
 > python3 -m venv venv
 ```
 
-Step 3:
+Step 6:
 ```bash
 Activate your python virtual environment
 > source venv/bin/activate
 ```
 
 Step 4:
+```bash
+Set  PYTHONPATH so the SDK can find the generated open-api models.
+> cd gccg--cdd
+> source setup_env.sh 
+```
+
+Step 5:
 
 ```bash
 Install python external dependencies (listed in requirements.txt) into your python virtual env.
 > pip3 install -r requirements.txt
 ````
 
-step 5:
-```bash
-Ensure the compiled_schemas have been updated.  Run
-> <cdd install dir>/src/schemas/compile_schemas.py
-> <cdd install dir>/src/schemas/validate_compiled_schemas.py
 
-Expect:
-=== Running test1 ===
-✅ test1 validation successful
 
-=== Running test2 ===
-✅ test2 validation successful
-
-=== Running test3 ===
-✅ test3 validation successful
-
-```
-
-### Run the Application Reference Design
-The following step will show you how to set up and run the Application Reference Design (ARD) and SDK.  
+### Start the CDD SDK and use the Application Reference Design (ARD)
+The following step run the Application Reference Design (ARD) and CDD SDK.  
 The SDK runs as a stand-alone process hosting a rest API.  The ARD simulates a video encoder host system making requests
 on the SDK Rest API.  The SDK will connect to the host service defined by --host_id.  Both the ARD and SDK log to std 
 out, so it's best to run the ARD and SDK in their own terminal to avoid confusion.
@@ -282,52 +333,37 @@ Step 0
 Setup command line arguments.  The following syntax assumes BASH syntax, so adjust accordingly.  
 
 The SDK will store credentials $CERTS_PATH/$ID when claimed.
-> CERTS_PATH="<writeable and persistent folder, not /tmp>"
-
-The ARD is a simple, one channel encoder capable of SRT outputs.  An example instance_schema is provided
-that advertises the relevant settings.  
-> INSTANCE_SCHEMA="$PWD/src/device_config/instance_schema.json"
-
-For a production device, ID must be constant as the SDK places credentials in $CERTS_PATH/$ID.  
-For testing, it is convenient have the option to supply a different ID to allow pairing multiple devices on
-the same system without needing to de-provision them every time.  
-> ID=my_device_123
+> export CERTS_PATH="<writeable and persistent folder, not /tmp>"
+> export ID=my_device_123   
 ```
 
 Step 1:
 
 ```bash
-Run the SDK Daemon.
+Start the SDK Daemon.
 
 The SDK will start, but will otherwise do nothing except quietly await API requests from the ARD.  
-> python3 src/server_flask.py --certs_path $CERTS_PATH --schema_path <cdd sdk path>/src/compiled_schemas/  --registration_file_path <cdd sdk path>/src/payloads/1_channel_encoder/registration.json  --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type [SOURCE | DESTINATION] --internal_device_id  $I --log_path /tmp/ 
+In Terminal Window #1
+1> python3 src/server_flask.py --certs_path $CERTS_PATH --registration_file_path <cdd sdk path>/src/payloads/1_channel_encoder/registration.json  --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type [SOURCE | DESTINATION | BOTH] --internal_device_id  $ID --log_path /tmp/ 
 ``` 
 
 Step 2:
 ```bash
-Start the Pairing Process.  
 
-ARD acts as a simple FFMPEG encoder capable of running only a single channel with an SRT caller output using h264.  
-The ARD will make a connect() request every few seconds.  The connect() response includes connection status, 
-pairing if PAIRING is needed. 
+Start the Application Reference Design.
+In Terminal Window #2
+2> python3 ./src/application_reference/application.py --host_id vsf_test_host
 
-The argument --host_id: vsf_test_host instructs the SDK to find the VSF Test Endpoint defined in 
-src/host_configuration/vsf_test_host.json.   
+What happens: 
 
-Once started, the SDK looks for credentials in $CERTS_PATH/$ID.  
-Since this 'device' has not yet been claimed, the SDK finds none.  As a result, the SDK starts the pairing process. 
+  The ARD has never being claimed into a host service...not yet.  
+  The ARD will make a connect() request on the SDK
+  The SDK will connect to the VSF cloud test service definded in the file src/host_configuration/vsf_test_host.json
 
-Open a new terminal.  (STDOUT messages printed by both the ARD and SDK can thus be seen separately.)
-cd <local cdd installation folder>
-source venv/bin/activate
+  The SDK looks for credentials in $CERTS_PATH/$ID.  
+  The SDK finds none.  
+  The SDK starts the pairing process and should give you the Pairing Code
 
-For connecting to your own host service:
-1: copy vsf_test_host.json to my_service_name.json.
-2: update the URLs to point to your services pairing and auth endpoints.
-3: Start the application rederenceL:  python3 ./src/application_reference/application.py --host_id <my_service_name>
-
-For conneting to the deployed VSF Test Host
-1. python3 ./src/application_reference/application.py --host_id vsf_test_host
 
 Expected Output: 
 > Device is not paired. Pairing Code: KY84IV  Expires in: 1799s
@@ -335,10 +371,13 @@ Expected Output:
 ```
 
 ```bash
-Claim the device.
+Claim the device into the VSF cloud test registry 
+
+From here well make API calls to the CDD VSF Cloud Test endpoint.  This requres an AWS account you used
+in the setup.  
 
 Request VSF Host Test Endpoint to "claim" the device into your account using the DiscoveryAPICaller credentials.
-Request:  <base_endpoint>/dev/authorize/{pairing-code}   e.g.   <base_endpoint>/dev/authorize/KY84IV
+Request: <base_endpoint>/authorize/{pairing-code}   e.g.  <base_endpoint>/authorize/KY84IV
 Request Type: PUT 
 Request Authorization:  AWS Signature (or similar depending on your API Caller application)
 
@@ -356,7 +395,7 @@ service-assigned "device_id".  The ARD output will look something like:
 
 The SDK stdout output is somewhat more verbose. 
 
-Now that the device is claimed, we can restart the SDK and/or the ARD and it will immediately reconnect. Try that now:
+Now that the device is claimed, we could restart the SDK and/or the ARD and it will immediately reconnect. Try that now:
 Choose either/both the SDK or the ARD terminal.  
 > cont-c  to stop the process.  Up-Arrow/enter and restart it. 
 
@@ -370,12 +409,12 @@ Step 0
 Get Status (DescribeDevice)
 
 This will request the latest status message posted by the ARD/SDK to the VSF Host Service.  
-Request Path:  <base_endpoint>/dev/device/{device-id}
-Request Path:  <base_endpoint>/dev/device/{device-id}?include_schema=true|false
+Request Path: <base_endpoint>/device/{device-id}
+Request Path: <base_endpoint>/device/{device-id}?include_schema=true|false
 Request Type: GET 
-e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01
+e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01
 
-Expected Response:
+Expected Response is someething like:
 {
   "device_id": "string - Device identifier",
   "message": "string - Response message",
@@ -397,9 +436,9 @@ Expected Response:
 
 Get All Devices (ListDevices)
 This will return all devices currently regitered.
-Request Path:  <base_endpoint>/dev/devices/
+Request Path: <base_endpoint>/devices/
 Request Type: GET
-e.g.   <base_endpoint>/dev/devices
+e.g.  <base_endpoint>/devices
 
 Expected Response:
 [
@@ -425,12 +464,10 @@ Start the encoder from the VSF Host Endpoint.
 
 This will update the latest configuration which is validated by the VSF Host Service and communicated to the device.
 Edit: src/payloads/1_channel_encoder/configuration.json to point to your running SRT listener from the previous step.
-You will need to change
-1. update the IP, Port,
-2. update the protocol to "srt_caller"
-3. set encrtption to {} (encryption is not enabled in the reference design using simple ffmpeg) 
+You will need to provide values for your specific:
+1. IP, Port using srtCaller.  (At this time, the ARD only streams with srtCaller)
       
-Request Path:  <base_endpoint>/dev/device/{device-id} 
+Request Path: <base_endpoint>/device/{device-id} 
 Request Type: PUT 
 Request Body:
 Copy the JSON from src/payloads/1_channel_encoder/configuration.json
@@ -462,7 +499,7 @@ Edit: src/payloads/1_channel_encoder/configuration.json to point to your running
 Except the this time change the Channel param: 
  "state": "ACTIVE" ->  "state": "IDLE",
 
-Request Path:  <base_endpoint>/dev/device/{device-id} 
+Request Path: <base_endpoint>/device/{device-id} 
 Request Type: PUT 
 Request Body:
 Copy the JSON from src/payloads/1_channel_encoder/configuration.json
@@ -495,7 +532,7 @@ Test Endpoint.  This manual API allows testing while those features are added.
 ```bash
 Rotate Credentials and Describe Device to check the new expiration.
 
-Request Path: <base_endpoint>/dev/credentials/{device-id}
+Request Path:<base_endpoint>/credentials/{device-id}
 Request Type: PUT
 
 Expected Host Service Response:
@@ -506,9 +543,9 @@ Expected Host Service Response:
 }
 
 Get Status to see the updated credential expiration
-Request Path:  <base_endpoint>/dev/device/{device-id}
+Request Path: <base_endpoint>/device/{device-id}
 Request Type: GET
-e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01
+e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01
 
 Expected Host Service Response:
 {
@@ -542,10 +579,10 @@ The first response may be empty as the new subscription is being processed.
 The <thumbnail_id> is provided in the registration_file returned via the DescribeDevice API
 This file is provided by the application reference design on SDK startup.  See: CDD Message Protocol
 
-Request Path:  <base_endpoint>/dev/device/{device-id}?source=<thumbnail_id>
+Request Path: <base_endpoint>/device/{device-id}?source=<thumbnail_id>
 Request Type: GET
-e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01?source=SDI-1
-e.g.   <base_endpoint>/dev/device/001XI02IJ2FtSIirk01?source=HDMI-1
+e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01?source=SDI-1
+e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01?source=HDMI-1
 
 Expected Host Service Response:
 {
@@ -573,9 +610,9 @@ To view the image you must base64 decode base64_image and open in an appropriate
 
 # Once deprovisoined, any subsequent call to connect will start the pairing process.  
 
-Request Path:  <base_endpoint>/dev/deprovision/{device-id}
+Request Path: <base_endpoint>/deprovision/{device-id}
 Request Type: PUT
-e.g.   <base_endpoint>/dev/deprovision/001XI02IJ2FtSIirk01
+e.g.  <base_endpoint>/deprovision/001XI02IJ2FtSIirk01
 
 Expected Host Service Response:
 {

@@ -11,30 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# Standard library imports
 import json
-import cattr
-from topics import Topics
 import os
-from pathlib import Path
 import shutil
+from pathlib import Path
 from threading import Lock
-from typing import Union, Optional
+from typing import Optional, Union
+
+# Third-party imports
+import cattr
+
+# Generated model imports
+from internal_api_client.models.authenticate_response_content import AuthenticateResponseContent
+from internal_api_client.models.host_settings import HostSettings
+from internal_api_client.models.rotate_certificates_request_content import RotateCertificatesRequestContent
+
+# Local application imports
+from cdd_internal_models import ConnectionSettings
 from custom_exceptions import (
-    CertificatesWriteError,
     CertificatesReadError,
+    CertificatesWriteError,
+    DeprovisionError,
     SystemIntegrationError,
-    DeprovisionError
+    ConnectError
 )
 from custom_logger import logger
-from utils import generate_csr, generate_client_keys
-
-from service_api_models import (
-    HostSettings,
-    PairResponse,
-    AuthResponse,
-    ConnectionSettings,
-    CertRotate
-)
+from utils import generate_client_keys, generate_csr
 
 
 class CredentialStore(object):
@@ -72,7 +75,6 @@ class CredentialStore(object):
         self.host_settings: Union[HostSettings, None] = None
         self.connection_settings_file: str = os.path.join(self.dir, "connection_settings")
         self.connection_settings: Optional[ConnectionSettings] = None
-        self._topics = None
         self.priv_key: str = ""  # need to keep between pair() and auth()
         self.pub_key: str = ""  # need to keep between pair() and auth()
         self.csr: str = ""  # need to keep between pair() and auth()
@@ -87,14 +89,10 @@ class CredentialStore(object):
     def get_region(self) -> str:
         return self.connection_settings.region
 
-    def get_topics(self) -> Union[Topics, None]:
-        """
-        Returns the topics object for this device when the device_id is known.
-
-        Returns:
-            Union[Topics, None] None when certs aren't initialized with a device_id.
-        """
-        return self._topics
+    def get_connected_host_settings(self) -> HostSettings:
+        if not self.host_settings:
+            raise ConnectError(details="Host settings not initialized.  Likely not connected.")
+        return self.host_settings
 
     def generate_keys_and_csr(self):
         """
@@ -146,7 +144,7 @@ class CredentialStore(object):
                     )
             try:
                 with open(self.connection_settings_file, "r") as f:
-                    self.connection_settings = cattr.structure(json.loads(f.read()), ConnectionSettings)
+                    self.connection_settings = cattr.structure(json.load(f), ConnectionSettings)
 
             except Exception as e:
                 # file system error or some kind of permissions problem.
@@ -159,24 +157,20 @@ class CredentialStore(object):
 
             try:
                 with open(self.host_settings_file, "r") as f:
-                    self.host_settings = cattr.structure_attrs_fromdict(json.load(f), HostSettings)
+                    self.host_settings = HostSettings.from_dict(json.load(f))
             except Exception as e:
                 # File system error or some kind of permissions problem.
                 raise CertificatesReadError(
                     details=f"Invalid host_settings: {self.host_settings_file}. Re-pair device. Msg: {e}."
                 ) from e
 
-            # Topics are typically device_id dependent in a host service for message routing
-            # and IAM controls.
-            self._topics = Topics(self.connection_settings.device_id, self.host_settings)
-
             # Cert files exists, initialized and ready to use.
             return True
 
     def write_to_filesystem(
             self,
-            pair_response: PairResponse,
-            auth_response: AuthResponse
+            device_id: str,
+            auth_response: AuthenticateResponseContent
     ):
         """
         Saves certs and host_settings to the file system.
@@ -184,7 +178,8 @@ class CredentialStore(object):
         then an exception is raised here on failure to write.
 
         Args:
-           PairResponse, AuthResponse:  See Host Service API
+           device_id: Device ID from successful pair response
+           auth_response: AuthResponse from Host Service API
 
         Returns:
             None
@@ -210,26 +205,24 @@ class CredentialStore(object):
                     f.write(self.priv_key)
 
                 with open(self.connection_settings_file, "w") as f:
-                    # Write the UriModel to both validate and write to file.
                     self.connection_settings = ConnectionSettings(
-                        device_id=pair_response.device_id,
-                        uri=auth_response.MQTTUri,
+                        device_id=device_id,
+                        uri=auth_response.mqtt_uri,
                         region=auth_response.region
                     )
                     f.write(json.dumps(cattr.unstructure(self.connection_settings)))
 
                 with open(self.host_settings_file, "w") as f:
-                    json.dump(cattr.unstructure(auth_response.host_settings), f)
+                    json.dump(auth_response.host_settings.to_dict(), f)
 
             except Exception as e:
                 # File system Error or some kind of permissions problem that changed after the SDK was started.
+                self.deprovision()
                 raise CertificatesWriteError(
                     details=f"Unable to write certificates to the device: {e}."
                 )
 
-            self._topics = Topics(self.connection_settings.device_id, auth_response.host_settings)
-
-    def rotate_certs(self, certs_rotate: CertRotate) -> bool:
+    def rotate_certs(self, certs_rotate: RotateCertificatesRequestContent) -> bool:
         """
         Updates the device cert and connection settings file on the filesystem.
         If an update is needed, then return True
@@ -248,12 +241,12 @@ class CredentialStore(object):
                 need_to_update = True
 
         # Update a changed MQTT Uri or Region description persisted in the connection_settings file.
-        if (certs_rotate.MQTTUri != self.connection_settings.uri or
+        if (certs_rotate.mqtt_uri != self.connection_settings.uri or
                 certs_rotate.region != self.connection_settings.region):
             with open(self.connection_settings_file, "w") as f:
                 self.connection_settings = ConnectionSettings(
                     device_id=self.connection_settings.device_id,
-                    uri=certs_rotate.MQTTUri,
+                    uri=certs_rotate.mqtt_uri,
                     region=certs_rotate.region
                 )
                 f.write(json.dumps(cattr.unstructure(self.connection_settings)))
@@ -265,7 +258,7 @@ class CredentialStore(object):
         """
         Deprovision the device by removing the certs from the filesystem.
         """
-        print(f"Called deprovision.")
+        print(f"Removing certs from device for: {self.dir}")
         try:
             shutil.rmtree(self.dir)
         except Exception as e:

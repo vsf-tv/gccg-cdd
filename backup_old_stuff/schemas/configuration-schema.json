@@ -23,7 +23,8 @@
             "description": "A profile ID to apply.",
             "properties": {
               "id": {"type": "string"}
-            }
+            },
+            "additionalProperties": false
           },
           "state": {
             "$ref": "definitions/primitives.json#/$defs/state"

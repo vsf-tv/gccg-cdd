@@ -11,20 +11,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-import cattr
-import requests
+# Standard library imports
 import time
 from typing import Optional
+
+# Generated model imports
+from internal_api_client.api.default_api import DefaultApi
+from internal_api_client.api_client import ApiClient
+from internal_api_client.configuration import Configuration
+from internal_api_client.exceptions import ApiException
+from internal_api_client.models.authenticate_response_content import AuthStatus
+from internal_api_client.models.authenticate_request_content import AuthenticateRequestContent
+from internal_api_client.models.authenticate_response_content import AuthenticateResponseContent
+from internal_api_client.models.pair_request_content import PairRequestContent
+from internal_api_client.models.pair_failure_reason import PairFailureReason
+from internal_api_client.models.pair_response_content import PairResponseContent
+from internal_api_client.models.protocol_version import ProtocolVersion
+from internal_api_client.models.success import Success
+
+# Local application imports
 from credentialstore import CredentialStore
 from custom_exceptions import (
     PairingError,
     PairingServiceRequestConnectionError,
     PairingServiceRequestTimeoutError,
     PairingServiceResponseError,
+    PairingCompatibilityVersionError,
+    PairingCompatibilityDeviceTypeError,
+    PairingCompatibilityHostIDError
 )
 from custom_logger import logger
-from service_api_models import HostSettings, PairRequest, PairResponse, AuthRequest, AuthResponse
 
 MAX_TIMEOUT_SEC = 5
 
@@ -49,9 +65,18 @@ class Pairing(object):
         self.pairing_url = pairing_url
         self.auth_url = auth_url
 
+        # Create separate API clients for pair and authenticate endpoints
+        pair_config = Configuration(host=pairing_url)
+        self.pair_api_client = ApiClient(configuration=pair_config)
+        self.pair_api = DefaultApi(api_client=self.pair_api_client)
+        
+        auth_config = Configuration(host=auth_url)
+        self.auth_api_client = ApiClient(configuration=auth_config)
+        self.auth_api = DefaultApi(api_client=self.auth_api_client)
+
         # These values will be set by get_new_pairing_code().
-        self.pair_response: Optional[PairResponse] = None
-        self.auth_response: Optional[AuthResponse] = None
+        self.pair_response: Optional[PairResponseContent] = None
+        self.auth_response: Optional[AuthenticateResponseContent] = None
 
     def is_expired(self):
         """
@@ -67,7 +92,7 @@ class Pairing(object):
 
         now = int(time.time())
         diff = now - self.start_time
-        if diff > self.pair_response.pairing_timeout_seconds:
+        if diff > self._get_success_data().pairing_timeout_seconds:
             logger.info(f"Pairing Expired.")
             return True
         return False
@@ -86,53 +111,71 @@ class Pairing(object):
             return 0
         now = int(time.time())
         return max(
-            0, self.pair_response.pairing_timeout_seconds - (now - self.start_time)
+            0, self._get_success_data().pairing_timeout_seconds - (now - self.start_time)
         )
 
     def get_new_pairing_code(self):
         try:
+            # Grab the TR12 version from the generated client
+            version: str = ProtocolVersion().version
+            logger.info(f"Using Protocol Version: {version}")
             self.certs.generate_keys_and_csr()
-            pair_request: PairRequest = PairRequest(
-                device_type=self.device_type,
-                host_id=self.host_id,
-                csr=self.certs.csr,
+            pair_request = PairRequestContent.from_dict({
+                "deviceType": self.device_type,
+                "hostId": self.host_id,
+                "csr": self.certs.csr,
+                "version": version
+            })
+            
+            logger.info(f"Calling pair API with base URL: {self.pairing_url}")
+            # Pydantic nested validation bug requires using to_dict() method for nested objects
+            self.pair_response: Optional[PairResponseContent]= self.pair_api.pair(
+                pair_request_content=pair_request.to_dict(),
+                _request_timeout=MAX_TIMEOUT_SEC
             )
-            with requests.post(
-                    self.pairing_url,
-                    json=cattr.unstructure(pair_request),
-                    timeout=MAX_TIMEOUT_SEC,
-            ) as response:
-                logger.info(f"Pairing response: {response.text}")
 
-                # Check status code first
-                if response.status_code != 200:
-                    raise PairingError(
-                        details=f"StatusCode: {response.status_code} - Response: {response.text}"
-                    )
-
-                response_json = json.loads(response.text)
-
-        except requests.HTTPError as e:
-            # This is now redundant but kept for defensive programming
+        except ApiException as e:
+            logger.error(f"API Exception - Status: {e.status}, Body: {e.body}, Reason: {e.reason}")
             raise PairingError(
-                details=f"HTTP Error - StatusCode: {response.status_code} - Msg: {e}"
+                details=f"API Error - StatusCode: {e.status} - Response: {e.body}"
             )
-        except requests.ConnectionError as e:
-            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
-        except requests.Timeout as e:
+        except TimeoutError as e:
             raise PairingServiceRequestTimeoutError(details=f"Msg: {e}")
-        except json.JSONDecodeError as e:
-            raise PairingServiceResponseError(details=str(e.msg))
+        except ConnectionError as e:
+            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
         except Exception as e:
+            logger.error(f"Unexpected exception in get_new_pairing_code: {type(e).__name__}: {e}")
             raise PairingError(details=f"Msg: {e}")
+        
+        # assuming the request succeeded, the client/host compatibility might have failed
+        result = self.pair_response.result
+        if isinstance(result.actual_instance, Success):
+            # success - actual_instance is Success wrapper, .success is PairSuccessData
+            return True
+        else:
+            # actual_instance is Failure wrapper, .failure is PairFailureData
+            failure_data = result.actual_instance.failure
+            if failure_data.reason == PairFailureReason.VERSION_NOT_SUPPORTED:
+                raise PairingCompatibilityVersionError(
+                    details=f"Pairing Failed: {failure_data.reason}"
+                )
 
-        try:
-            # Parse the response. Let the PairResponse class handle validation.
-            self.pair_response = cattr.structure(response_json, PairResponse)
-        except Exception as e:
-            raise PairingServiceResponseError(details=f"Msg: {e}")
+            if failure_data.reason == PairFailureReason.DEVICE_TYPE_NOT_SUPPORTED:
+                raise PairingCompatibilityDeviceTypeError(
+                    details=f"Pairing Failed: {failure_data.reason}"
+                )
 
-        return True
+            if failure_data.reason == PairFailureReason.HOST_ID_MISMATCH:
+                raise PairingCompatibilityHostIDError(
+                    details=f"Pairing Failed: {failure_data.reason}"
+                )
+
+            raise PairingError()
+
+    def _get_success_data(self):
+        """Helper to get the success data from the pair response union.
+        actual_instance is Success wrapper, .success is PairSuccessData"""
+        return self.pair_response.result.actual_instance.success
 
     def get_pairing_code(self) -> str:
         """
@@ -142,7 +185,7 @@ class Pairing(object):
            str: The pairing code if available, otherwise an empty string.
         """
         if self.pair_response:
-            return self.pair_response.pairing_code
+            return self._get_success_data().pairing_code
         return ""
 
     def authenticate_pairing_code(self) -> bool:
@@ -163,62 +206,44 @@ class Pairing(object):
 
         # Call the Host Service Auth API.
         try:
-            # Host Service API auth request model.
-            auth_request: AuthRequest = AuthRequest(
-                device_id=self.pair_response.device_id,
-                pairing_code=self.pair_response.pairing_code,
-                access_code=self.pair_response.access_code,
+            auth_request = AuthenticateRequestContent.from_dict({
+                "deviceId": self._get_success_data().device_id,
+                "pairingCode": self._get_success_data().pairing_code,
+                "accessCode": self._get_success_data().access_code,
+            })
+
+            # Pydantic nested validation bug requires using to_dict() method for nested objects
+            self.auth_response: AuthenticateResponseContent = self.auth_api.authenticate(
+                authenticate_request_content=auth_request.to_dict(),
+                _request_timeout=MAX_TIMEOUT_SEC
             )
-            with requests.post(
-                    self.auth_url,
-                    json=cattr.unstructure(auth_request),
-                    timeout=MAX_TIMEOUT_SEC,
-            ) as response:
 
-                # Check status code first
-                if response.status_code != 200:
-                    raise PairingError(
-                        details=f"StatusCode: {response.status_code} - Response: {response.text}"
-                    )
-
-                response_json = json.loads(response.text)
-
-        except requests.HTTPError as e:
-            # This is now redundant but kept for defensive programming
+        except ApiException as e:
             raise PairingError(
-                details=f"HTTP Error - StatusCode: {response.status_code} - Msg: {e}"
+                details=f"API Error - StatusCode: {e.status} - Response: {e.body}"
             )
-        except requests.ConnectionError as e:
-            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
-        except requests.Timeout as e:
+        except TimeoutError as e:
             raise PairingServiceRequestTimeoutError(details=f"Msg: {e}")
-        except json.JSONDecodeError as e:
-            raise PairingServiceResponseError(details=str(e.msg))
+        except ConnectionError as e:
+            raise PairingServiceRequestConnectionError(details=f"Msg: {e}")
         except Exception as e:
             raise PairingError(details=f"Msg: {e}")
 
-        try:
-            # Parse the response. Let the AuthResponse class handle validation.
-            self.auth_response = cattr.structure(response_json, AuthResponse)
-        except Exception as e:
-            raise PairingServiceResponseError(details=f"Msg: {e}")
-
-        # The service response MUST include either of the following:
-        if self.auth_response.status == "STANDBY":
-            # OK the API responded with something valid.
-            # Auth on the pairing code not complete or pairing/access codes are expired, never existed.
-            logger.info(f"Waiting for Authorization on: {self.pair_response.pairing_code}")
+        # The pairing code has not yet been claimed.
+        if self.auth_response.status == AuthStatus.STANDBY :
+            logger.info(f"Waiting for Authorization on: {self._get_success_data().pairing_code}")
             return False
 
-        elif self.auth_response.status == "CLAIMED":
-            logger.info("Authenticated!")
+        # The pairing code has been claimed.
+        elif self.auth_response.status == AuthStatus.CLAIMED:
+            logger.info(f"Authenticated!:  Auth response: {self.auth_response}")
             try:
                 self.certs.write_to_filesystem(
-                    pair_response=self.pair_response,
+                    device_id=self._get_success_data().device_id,
                     auth_response=self.auth_response
                 )
                 return True
             except Exception as e:
                 raise PairingError(details=f"Unable to write certs to disk: {e}")
         else:
-            raise PairingServiceResponseError(details=f"Response: {response_json}")
+            raise PairingServiceResponseError(details=f"Unexpected status")
