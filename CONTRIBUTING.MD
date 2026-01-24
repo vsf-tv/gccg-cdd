@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in this VSF Technical Recommendation.
+Thanks for your interest in this VSF Technical Recommendation TR12
 
 VSF Technical Recommendations and other work products are developed and ratified in accordance with 
 the [VSF Document Procedures](https://vsf.tv/policies/VSF_Document_Process_Policy.pdf).  They are 

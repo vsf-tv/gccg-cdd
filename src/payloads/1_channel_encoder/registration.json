@@ -1,14 +1,27 @@
 {
+  "simpleSettings": [
+    {
+      "name": "Clock Source",
+      "info": "Sets the clock source for all active channels.",
+      "id": "sync_clock_source",
+      "enums": {
+        "values": [
+          "INTERNAL", "GENLOCK", "NTP", "PTP"
+        ],
+        "defaultValue": "NTP"
+      }
+    }
+  ],
   "channels": [
     {
       "name": "Encoder Channel 1",
       "id": "CH1",
-      "channel_type": "SOURCE",
-      "connection_protocols": [
-        "srt_caller",
-        "srt_listener"
+      "channelType": "SOURCE",
+      "connectionProtocols": [
+        "SRT_CALLER",
+        "SRT_LISTENER"
       ],
-      "setting_profiles": [
+      "profileSettings": [
         {
           "name": "h264_contribution_compact",
           "id": "h264c",
@@ -35,7 +48,7 @@
           "info": "H265, 60fps, 40mps, 4k, 500ms gop"
         }
       ],
-      "settings": [
+      "simpleSettings": [
         {
           "name": "resolution",
           "info": "Output video dimensions.",
@@ -46,7 +59,7 @@
               "1280x720",
               "640x480"
             ],
-            "default_value": "1920x1080"
+            "defaultValue": "1920x1080"
           }
         },
         {
@@ -59,7 +72,7 @@
               "60",
               "25"
             ],
-            "default_value": "30"
+            "defaultValue": "30"
           }
         },
         {
@@ -69,7 +82,7 @@
           "ranges": {
             "min": 5000,
             "max": 50000,
-            "default_value": 10000
+            "defaultValue": 10000
           }
         },
         {
@@ -82,7 +95,7 @@
               "VBR",
               "ABR"
             ],
-            "default_value": "CBR"
+            "defaultValue": "CBR"
           }
         },
         {
@@ -95,7 +108,7 @@
               "H.265",
               "VP9"
             ],
-            "default_value": "H.264"
+            "defaultValue": "H.264"
           }
         },
         {
@@ -108,7 +121,7 @@
               "60",
               "90"
             ],
-            "default_value": "60"
+            "defaultValue": "60"
           }
         },
         {
@@ -121,7 +134,7 @@
               "HDMI1",
               "IP"
             ],
-            "default_value": "SDI1"
+            "defaultValue": "SDI1"
           }
         }
       ]
@@ -131,12 +144,12 @@
     {
       "name": "Channel Preview",
       "id": "SDI-1",
-      "local_path": "/tmp/image_sdi.jpg"
+      "localPath": "/tmp/image_sdi.jpg"
     },
     {
       "name": "Channel Preview",
       "id": "HDMI-1",
-      "local_path": "/tmp/image_hdmi.jpg"
+      "localPath": "/tmp/image_hdmi.jpg"
     }
   ]
 }

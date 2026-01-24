@@ -1,15 +1,20 @@
-import attr
-import cattr
+# Standard library imports
 import os
-from pathlib import Path
-import requests
 import threading
 import time
+from pathlib import Path
+
+# Generated model imports
+from internal_api_client.models.request_thumbnail_request_content import RequestThumbnailRequestContent
+from internal_api_client.models.thumbnail_request import ThumbnailRequest
+
+# Third-party imports
+
+# Local application imports
 from custom_exceptions import (
-    ThumbnailProcessingError,
-    InvalidThumbnailSubscription
+    InvalidThumbnailSubscription,
+    ThumbnailProcessingError
 )
-from service_api_models import ThumbnailRequest, ThumbnailRequests
 from custom_logger import logger
 from utils import upload_file
 
@@ -90,14 +95,13 @@ class ThumbnailManager(object):
         for key, uploader in self.thumbnail_uploader.items():
             uploader.stop()
 
-    def update_thumbnail(self, tn_json: dict):
+    def update_thumbnail(self, thumbnail_subscription: RequestThumbnailRequestContent):
         """
         Stops any current ThumbnailRequest, updates and starts the updated ThumbnailRequest.
         """
         try:
-            # Request is dict: {"<source>": ThumbnailRequest, ... }
-            thumbnail_requests = {key: cattr.structure(req, ThumbnailRequest) for key, req in tn_json.items()}
-            for key, request in thumbnail_requests.items():
+            # Request is RequestThumbnailRequestContent with requests dict: {"<source>": ThumbnailRequest, ... }
+            for key, request in thumbnail_subscription.requests.items():
                 # Stop if there is an existing subscription for this same source.
                 if key in self.thumbnail_uploader:
                     logger.info(f"Thumbnails: Stopping uploader for source: {key}.")
@@ -115,7 +119,7 @@ class ThumbnailManager(object):
             raise InvalidThumbnailSubscription(details=f"Unknown error.  Msg: {e}.") from e
 
 
-def validate_request_params(thumbnail_request) -> bool:
+def validate_request_params(thumbnail_request: ThumbnailRequest) -> bool:
     """
     Checks properties of the request to ensure it can be fulfilled.
     Will not throw exception since these errors can simply be transient.
@@ -123,7 +127,7 @@ def validate_request_params(thumbnail_request) -> bool:
     Raises: ThumbnailProcessingError on exception.
     """
     try:
-        if thumbnail_request.is_expired():
+        if thumbnail_request.expires < int(time.time()):
             logger.info(f"Thumbnail: Request expired.")
             return False
 
@@ -143,8 +147,8 @@ def validate_request_params(thumbnail_request) -> bool:
         file_size = path.stat().st_size
         file_size_kb = file_size / 1024
         # Skip files > the threshold set by the thumbnail request emitted by the host service.
-        if file_size_kb > thumbnail_request.max_size_KB:
-            logger.warn(f"Thumbnails: {file_size_kb}KB file exceeds {thumbnail_request.max_size_KB}KB limit.")
+        if file_size_kb > thumbnail_request.max_size_kilobyte:
+            logger.warn(f"Thumbnails: {file_size_kb}KB file exceeds {thumbnail_request.max_size_kb}KB limit.")
             return False
 
         return True

@@ -11,14 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from flask import Flask, request, jsonify
-import fcntl
-from typing import Optional
-from discovery_sdk import CddSdk
+# Standard library imports
 import argparse
+import fcntl
+import os
 import signal
 import sys
+from typing import Optional
+
+# Third-party imports
+from flask import Flask, jsonify, request
+
+# Local application imports
 from custom_logger import logger
+from discovery_sdk import CddSdk
 
 
 class CddSdkManager:
@@ -27,7 +33,6 @@ class CddSdkManager:
     Usage: server_flask.py
                     --name <device_local_id (str)>
                     --certs_path <>
-                    --schema_path <path>/instance_schema.json
                     --ip <eg. 127.0.0.1>
                     --port <port>
 
@@ -45,7 +50,7 @@ class CddSdkManager:
     _instance: Optional["CddSdkManager"] = None
     _DSDK_client = None
 
-    def __init__(self, certs_path: str, device_local_id: str, schema_path: str, registration_file: str, device_type: str, log_path: str):
+    def __init__(self, certs_path: str, device_local_id: str, device_type: str, log_path: str):
         # If the SDK fails to load because the paths or schema file are bad, then an Exception will
         # be thrown here. These are indeed fatal errors and the application should not continue.
 
@@ -53,8 +58,6 @@ class CddSdkManager:
             self._DSDK_client = CddSdk(
                 certs_path=certs_path,
                 device_local_id=device_local_id,
-                schema_path=schema_path,
-                registration_file=registration_file,
                 device_type=device_type,
                 log_path=log_path,
             )
@@ -71,13 +74,11 @@ class CddSdkManager:
 
 
 class APIServer:
-    def __init__(self, certs_path: str, device_local_id: str, schema_path: str, registration_file: str, device_type: str, log_path: str):
+    def __init__(self, certs_path: str, device_local_id: str, device_type: str, log_path: str):
         self.app = Flask(__name__)
         self.sdk_manager = CddSdkManager(
             certs_path=certs_path,
             device_local_id=device_local_id,
-            schema_path=schema_path,
-            registration_file=registration_file,
             device_type=device_type,
             log_path=log_path,
         )
@@ -100,10 +101,16 @@ class APIServer:
 
         @self.app.route("/connect", methods=["PUT"])
         def connect():
-            host_id = request.args.get('host_id')
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Request body is required"}), 400
+            host_id = data.get('hostId') or data.get('host_id')
+            registration = data.get('registration')
             if not host_id:
                 return jsonify({"error": "host_id is required"}), 400
-            response = jsonify(self.sdk_manager.get_client().connect(host_id=host_id).to_dict())
+            response = jsonify(self.sdk_manager.get_client().connect(
+                registration=registration, host_id=host_id
+            ).to_dict())
             return response
 
         @self.app.route("/disconnect", methods=["PUT"])
@@ -118,19 +125,29 @@ class APIServer:
 
         @self.app.route("/report_status", methods=["PUT"])
         def report_status():
-            payload = request.get_json()
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Request body is required"}), 400
+            status = data.get('status')
+            if not status:
+                return jsonify({"error": "status is required"}), 400
             return jsonify(
                 self.sdk_manager.get_client()
-                .report_status(payload=payload)
+                .report_status(payload=status)
                 .to_dict()
             )
 
         @self.app.route("/report_actual_configuration", methods=["PUT"])
         def report_configuration():
-            payload = request.get_json()
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Request body is required"}), 400
+            configuration = data.get('configuration')
+            if not configuration:
+                return jsonify({"error": "configuration is required"}), 400
             return jsonify(
                 self.sdk_manager.get_client()
-                .report_configuration(payload=payload)
+                .report_configuration(payload=configuration)
                 .to_dict()
             )
 
@@ -162,23 +179,31 @@ class ProcessAlreadyRunningError(Exception):
 
 def ensure_single_instance():
     lock_file = "/tmp/your_program.lock"
-
+    
     try:
-        # Open the lock file.
+        # Open the lock file
         fp = open(lock_file, "w")
-        # Try to get an exclusive lock.
+        # Try to get an exclusive lock (auto-releases when process dies)
         fcntl.lockf(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        # Keep the file pointer reference so the lock remains.
+        # Write PID for debugging
+        fp.write(str(os.getpid()))
+        fp.flush()
+        # Keep the file pointer reference so the lock remains
         return fp
     except IOError:
-        logger.error("Another instance is already running")
-        raise ProcessAlreadyRunningError("Another instance is already running")
+        # Try to read the PID from the lock file
+        try:
+            with open(lock_file, "r") as f:
+                existing_pid = f.read().strip()
+            logger.error(f"Another instance is already running (PID: {existing_pid})")
+            raise ProcessAlreadyRunningError(f"Another instance is already running (PID: {existing_pid})")
+        except (FileNotFoundError, ValueError):
+            logger.error("Another instance is already running")
+            raise ProcessAlreadyRunningError("Another instance is already running")
 
 
 def main(device_local_id: str,
          certs_path: str,
-         schema_path: str,
-         registration_file: str,
          tmp_path: str,
          log_path: str,
          ip: str,
@@ -189,8 +214,6 @@ def main(device_local_id: str,
     server = APIServer(
         certs_path=certs_path,
         device_local_id=device_local_id,
-        schema_path=schema_path,
-        registration_file=registration_file,
         device_type=device_type,
         log_path=log_path
     )
@@ -202,6 +225,10 @@ def main(device_local_id: str,
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
 
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+
     server.run(host=ip, port=port)
 
 
@@ -210,7 +237,6 @@ if __name__ == "__main__":
     Starts the CDD SDK process. Once started the APIs can be accessed on the ip:port.
 
     Raises:
-        RuntimeError: installation problem related to certs/schema paths.
         ProcessAlreadyRunningError: Only one SDK instance should be running.
     """
 
@@ -228,14 +254,6 @@ if __name__ == "__main__":
         required=True,
         type=str,
         help="Enter a path for persistent cert storage",
-    )
-
-    parser.add_argument(
-        "--schema_path", required=True, type=str, help="Enter a path for the CDD protcol schema folder"
-    )
-
-    parser.add_argument(
-        "--registration_file_path", required=True, type=str, help="Enter a path for the devices registration file"
     )
 
     parser.add_argument(
@@ -277,8 +295,6 @@ if __name__ == "__main__":
     main(
         device_local_id=args.internal_device_id,
         certs_path=args.certs_path,
-        schema_path=args.schema_path,
-        registration_file=args.registration_file_path,
         tmp_path=args.tmp_path,
         log_path=args.log_path,
         ip=args.ip,

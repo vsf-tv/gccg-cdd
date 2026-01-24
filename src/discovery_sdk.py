@@ -11,62 +11,73 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cattr
-import time
+# Standard library imports
 import json
-import paho.mqtt.client as mqtt
-from paho.mqtt.client import MQTT_LOG_ERR, MQTT_LOG_WARNING, MQTT_LOG_DEBUG
+import time
 from threading import Lock
 from typing import Optional
+
+# Third-party imports
+import paho.mqtt.client as mqtt
+from paho.mqtt.client import MQTT_LOG_DEBUG, MQTT_LOG_ERR, MQTT_LOG_WARNING
+
+# Local application imports - import pairing BEFORE generated models to avoid namespace conflict
 from credentialstore import CredentialStore
 from custom_exceptions import (
-    ConnectError,
+    CertificatesRotationError,
     ClientAPIThrottle,
+    ConnectError,
+    DeprovisionError,
     InvalidConfigurationError,
+    InvalidLogsSubscription,
     InvalidStatusMessageError,
+    InvalidThumbnailSubscription,
     MQTTPublishError,
     PairingError,
+    ReportRegistrationError,
     ReportStatusError,
-    ReportSchemaError,
-    CertificatesRotationError,
-    InvalidThumbnailSubscription,
-    DeprovisionError,
-    SSLSetupError,
-    InvalidLogsSubscription
+    SSLSetupError
 )
-from custom_logger import logger, CDDLogHandler
+from custom_logger import CDDLogHandler, logger
 from pairing import Pairing
-from models import (
-    States,
-    Configuration,
-    ConnectResponse,
-    DisconnectResponse,
-    ReportStatusResponse,
-    ReportConfigurationResponse,
-    GetConfigurationResponse,
-    DeprovisionResponse
+from states import (
+    States
 )
-from schema_utils import SchemaRegistry
-from service_api_models import DeprovisionMessage, CertRotate, LogRequest, ReportMessage, DeprovisionReason
-from utils import upload_file
 
+from model_validator import validate_configuration, validate_registration, validate_status
+from thumbnails import ThumbnailManager
 from utils import (
     Throttle,
     publish_message,
+    ssl_alpn,
+    upload_file,
     validate_path_exists_and_writeable,
-    ssl_alpn
+    get_host_configuration,
+    UpdateID
 )
 
-from host_config import (
-    HostConfig,
-    get_host_config
-)
-from thumbnails import ThumbnailManager
+# Generated model imports for MQTT payloads
+from internal_api_client.models.deprovision_reason import DeprovisionReason
+from internal_api_client.models.deprovision_device_request_content import DeprovisionDeviceRequestContent
+from internal_api_client.models.request_log_request_content import RequestLogRequestContent
+from internal_api_client.models.request_thumbnail_request_content import RequestThumbnailRequestContent
+from internal_api_client.models.rotate_certificates_request_content import RotateCertificatesRequestContent
+from openapi_client.models.device_registration import DeviceRegistration
+from openapi_client.models.device_status import DeviceStatus
+from openapi_client.models.device_configuration import DeviceConfiguration
 
-SUPPORTED_DEVICE_TYPES = [
-    "ENCODER",
-    "DECODER",
-]  # (see: Message Protocol: SUPPORTED_DEVICE_TYPES)
+# Generated SDK models
+from openapi_client.models.configuration_data import ConfigurationData
+from openapi_client.models.connect_response_content import ConnectResponseContent
+from openapi_client.models.deprovision_response_content import DeprovisionResponseContent
+from openapi_client.models.disconnect_response_content import DisconnectResponseContent
+from openapi_client.models.get_configuration_response_content import GetConfigurationResponseContent
+from openapi_client.models.get_connection_status_response_content import GetConnectionStatusResponseContent
+from openapi_client.models.report_actual_configuration_response_content import ReportActualConfigurationResponseContent
+from openapi_client.models.report_status_response_content import ReportStatusResponseContent
+
+from custom_exceptions import exception_to_error_details
+
 
 class CddSdk(object):
     """
@@ -77,7 +88,10 @@ class CddSdk(object):
         certs_path (str): read/write path where certs can be found.
                           Will place new certs in <certs_path>/<device_local_id>
         device_local_id (int): Unique ID for the client, ie serial number etc.
-        schema_path (str): path to the scoped_schema for this device.
+        device_type: SOURCE | DESTINATION | BOTH.
+            Service will reject on pairing if the type is not supported
+        log_path: a local file path where the SDK will keep rotate logs.
+            See: src/custom_logger.py for details.
 
     Raises:
         SystemIntegrationError (see custom_exceptions)
@@ -88,18 +102,15 @@ class CddSdk(object):
         self,
         certs_path: str,
         device_local_id: str,
-        schema_path: str,
-        registration_file: str,
         device_type: str,
         log_path: str,
     ):
 
         self.certs_path: str = certs_path
         self.device_local_id: str = device_local_id
-        self.schema_path: str = schema_path
-        self.registration_file: str = registration_file
+        self.registration: dict = dict()
         self.device_type = device_type
-        self._log_request = LogRequest()
+        self._log_request = RequestLogRequestContent.from_dict({"expires": 0, "remotePath": ""})
 
         # Additional params and classes needed by the SDK.
         self.certs: CredentialStore = CredentialStore(
@@ -113,17 +124,14 @@ class CddSdk(object):
 
         self._processing_log_put = False  # Failsafe: simply drop sending logs if logs are spewing.
         self._log_spew_detected: int = 0
-        self.host_config: Optional[HostConfig] = None
         self.mqtt_client: Optional[mqtt.Client] = None
         self.thumbnail_manager: ThumbnailManager = ThumbnailManager()
         self.state = States.DISCONNECTED
         self.host_id: str = ""
         self.api_lock = Lock()
+        self.update_id = UpdateID()
         # Validate we can write certs to the certs_path: Raise Exception.
         validate_path_exists_and_writeable(certs_path)
-        # Validate the registration file against the registration-schema
-        self.schema_registry = SchemaRegistry(self.schema_path)
-        self.schema_registry.validate_registration_file(file=self.registration_file)
         self._reset()
 
     def shutdown(self):
@@ -140,11 +148,13 @@ class CddSdk(object):
         Disconnects from the current host if CONNECTED and places in the DISCONNECTED state.
         Resets all settings related to the host and prepares the SDK to make a new connection.
         """
+        self.registration = {}
+        self.update_id = UpdateID()
         self._initialize_throttles(1)
         self.host_id = None  # Unsetting host_id indicates host is no longer/not initialized.
         self.certs = None
         self.logger.update_device_id("")
-        self.configuration = Configuration()
+        self.configuration = ConfigurationData()
         self._registration_delivered = False
         self._transition(States.DISCONNECTED)
         self.thumbnail_manager.stop_all()
@@ -161,27 +171,29 @@ class CddSdk(object):
             pub_min_interval=interval_seconds
         )
 
-    def _initialize_host(self, host_id):
+    def _initialize_host(self, registration: dict, host_id: str):
         """
         Prepares the SDK for pairing or connecting to specific host_id.
         """
-        self.host_config = get_host_config(host_id, self.device_type)
+        validate_registration(registration)
+        self.registration = registration
+        host_config = get_host_configuration(host_id)
         self.certs = CredentialStore(
             self.certs_path, self.device_local_id, host_id
         )
         self.pairing = Pairing(
             self.certs,
             self.device_type,
-            self.host_config.service_id,
-            self.host_config.pairing_url,
-            self.host_config.auth_url,
+            host_config.service_id,
+            host_config.pairing_url,
+            host_config.auth_url,
         )
         self.host_id = host_id  # Host Initialized
 
     #
     #  PUBLIC METHODS
     #
-    def connect(self, host_id) -> ConnectResponse:
+    def connect(self, registration: dict, host_id: str) -> ConnectResponseContent:
         """
         Entry point for pairing, connect, obtain connection state.
 
@@ -209,33 +221,33 @@ class CddSdk(object):
                 if not self.host_id or self.host_id != host_id:
                     # Specifying a new/changed host. Ensure we disconnect and reconnect to the new one.
                     self._reset()
-                    self._initialize_host(host_id)
+                    self._initialize_host(registration, host_id)
 
             def handle_connecting_state():
                 # A connection is underway, nothing to do but wait for it.
-                return ConnectResponse(
-                    success=True,
-                    state=self.state,
-                    message="Connecting to the service"
-                )
+                return ConnectResponseContent.from_dict({
+                    "success": True,
+                    "state": self.state.value,
+                    "message": "Connecting to the service"
+                })
 
             def handle_connected_state():
-                return ConnectResponse(
-                    success=True,
-                    state=self.state,
-                    message="Connected",
-                    device_id=self.certs.get_device_id(),
-                    region=self.certs.get_region(),
-                )
+                return ConnectResponseContent.from_dict({
+                    "success": True,
+                    "state": self.state.value,
+                    "message": "Connected",
+                    "deviceId": self.certs.get_device_id(),
+                    "region": self.certs.get_region(),
+                })
 
             def handle_reconnecting_state():
-                return ConnectResponse(
-                    success=True,
-                    state=self.state,
-                    message="Reconnecting...",
-                    device_id=self.certs.get_device_id(),
-                    region=self.certs.get_region(),
-                )
+                return ConnectResponseContent.from_dict({
+                    "success": True,
+                    "state": self.state.value,
+                    "message": "Reconnecting...",
+                    "deviceId": self.certs.get_device_id(),
+                    "region": self.certs.get_region(),
+                })
 
             def handle_pairing_state():
                 if self._load_certs():
@@ -247,11 +259,11 @@ class CddSdk(object):
                 # Expired?
                 if self.pairing.is_expired():
                     self._reset()
-                    return ConnectResponse(
-                        success=False,
-                        state=self.state,
-                        message="Pairing code expired. Reconnect to get a new one.",
-                    )
+                    return ConnectResponseContent.from_dict({
+                        "success": False,
+                        "state": self.state.value,
+                        "message": "Pairing code expired. Reconnect to get a new one.",
+                    })
 
                 # OK Poll again for credentials. Will either save.
                 if self.pairing.authenticate_pairing_code():
@@ -271,13 +283,13 @@ class CddSdk(object):
                     )
 
                 # Still PAIRING, waiting to be claimed.
-                return ConnectResponse(
-                    success=True,
-                    state=self.state,
-                    message="Waiting for device to be claimed",
-                    pairing_code=self.pairing.get_pairing_code(),
-                    expires=self.pairing.expires_in(),
-                )
+                return ConnectResponseContent.from_dict({
+                    "success": True,
+                    "state": self.state.value,
+                    "message": "Waiting for device to be claimed",
+                    "pairingCode": self.pairing.get_pairing_code(),
+                    "expires": self.pairing.expires_in(),
+                })
 
             def handle_disconnected_state():
                 # device has been claimed and authentication succeeded. Connect now.
@@ -295,13 +307,13 @@ class CddSdk(object):
                 logger.info(self.state)
                 # will either get a code or throw exception.
 
-                return ConnectResponse(
-                    success=True,
-                    state=States.PAIRING,
-                    message="Connecting pending. Waiting for device to be claimed",
-                    pairing_code=self.pairing.get_pairing_code(),
-                    expires=self.pairing.expires_in(),
-                )
+                return ConnectResponseContent.from_dict({
+                    "success": True,
+                    "state": States.PAIRING.value,
+                    "message": "Connecting pending. Waiting for device to be claimed",
+                    "pairingCode": self.pairing.get_pairing_code(),
+                    "expires": self.pairing.expires_in(),
+                })
 
             # State-based dispatch - only one handler called
             state_handlers = {
@@ -325,19 +337,19 @@ class CddSdk(object):
                 # pairing response we can't parse.  Need to start with a clean state for
                 # any subsequent connection attempt.
                 try:
-                    logger.info(f"DISCONNECTING due to exception somewhere in connect() {str(e)}")
+                    logger.info(f"Exception: {str(e)}")
                     self._reset()
                 except Exception as e:
                     logger.info(f"Error in DISCONNECTING {str(e)}")
 
-                return ConnectResponse(
-                    success=False,
-                    state=self.state,
-                    message=f"Error in connect() {str(e)}",
-                    exception=e,
-                )
+                return ConnectResponseContent.from_dict({
+                    "success": False,
+                    "state": self.state.value,
+                    "message": f"Error in connect() {str(e)}",
+                    "error": exception_to_error_details(e),
+                })
 
-    def get_connection_status(self) -> ConnectResponse:
+    def get_connection_status(self) -> GetConnectionStatusResponseContent:
         logger.info("Get Connection Status")
 
         # Only message and region are impacted by state
@@ -345,15 +357,14 @@ class CddSdk(object):
         if self.state in [States.CONNECTED, States.RECONNECTING] and self.certs:
             region = self.certs.get_region()
 
-        return ConnectResponse(
-            success=True,
-            state=self.state,
-            message="",
-            region=region,
-        )
+        return GetConnectionStatusResponseContent.from_dict({
+            "success": True,
+            "state": self.state.value,
+            "message": "",
+        })
 
 
-    def disconnect(self) -> DisconnectResponse:
+    def disconnect(self) -> DisconnectResponseContent:
         """
         Stop the client and disconnect from the host service. Certs/Identify maintained.
         Returns a DisconnectResponse()
@@ -383,15 +394,15 @@ class CddSdk(object):
                 logger.info(f"Error in disconnect: {e}")
                 success, message, exception = False, f"Error in disconnect: {e}", e
 
-            return DisconnectResponse(
-                success=success,
-                state=States.DISCONNECTED,
-                message=message,
-                exception=exception
-            )
+            return DisconnectResponseContent.from_dict({
+                "success": success,
+                "state": States.DISCONNECTED.value,
+                "message": message,
+                "error": exception_to_error_details(exception)
+            })
 
 
-    def deprovision(self, host_id: str, force: bool = False) -> DeprovisionResponse:
+    def deprovision(self, host_id: str, force: bool = False) -> DeprovisionResponseContent:
         """
         Deprovision the device from the host service. Certs/Identify deleted.
         Returns a DisconnectResponse().
@@ -415,12 +426,12 @@ class CddSdk(object):
 
             if not self._connected_to(host_id) and not force:
                 message = f"Must use --force to deprovision client while not CONNECTED to: {host_id} "
-                return DeprovisionResponse(
-                    success=success,
-                    state=self.state,
-                    message=message,
-                    exception=exception
-                )
+                return DeprovisionResponseContent.from_dict({
+                    "success": success,
+                    "state": self.state.value,
+                    "message": message,
+                    "error": exception_to_error_details(exception)
+                })
             try:
                 self._handle_deprovision(host_id=host_id)
 
@@ -429,14 +440,14 @@ class CddSdk(object):
                 message = f"Error in Deprovision: {e}"
                 exception = e
 
-            return DeprovisionResponse(
-                success=success,
-                state=self.state,
-                message=message,
-                exception=exception
-            )
+            return DeprovisionResponseContent.from_dict({
+                "success": success,
+                "state": self.state.value,
+                "message": message,
+                "error": exception_to_error_details(exception)
+            })
 
-    def get_configuration(self) -> GetConfigurationResponse:
+    def get_configuration(self) -> GetConfigurationResponseContent:
         """
         Gets the latest configuration from the host service for this device.
         The caller can optionally ignore the configuration if the state is not CONNECTED.
@@ -456,31 +467,30 @@ class CddSdk(object):
         with self.api_lock:
             logger.info("Get Configuration")
             try:
-                if self.configuration.callback_error:
-                    raise InvalidConfigurationError()
-
                 # Configuration is locally cached. If the network is down for a moment, can still get latest
                 # if the client so desires.
-                logger.info(f"Passing updated configuration_id: {self.configuration.update_id} to client.")
-                return GetConfigurationResponse(
-                    success=True,
-                    state=self.state,
-                    message="Latest configuration provided",
-                    configuration=self.configuration,
-                )
-
+                # Pydantic v2 bug with nested model validation.  We have to call GetConfigurationResponseContent
+                # with ConfigurationData.to_dict() and let it validate  the result internally.  The workaround is
+                # to pass a dict instead of a model instance:
+                retval = GetConfigurationResponseContent.from_dict({
+                    "success": True,
+                    "state": self.state.value,
+                    "message": "Latest configuration provided",
+                    "configuration": self.configuration.to_dict()
+                })
+                return retval
             except Exception as e:
-                return GetConfigurationResponse(
-                    success=False,
-                    state=self.state,
-                    message=f"Latest valid configuration provided, but a more recent configuration was rejected",
-                    configuration=self.configuration,
-                    exception=e,
-                )
+                return GetConfigurationResponseContent.from_dict({
+                    "success": False,
+                    "state": self.state.value,
+                    "message": "Configuration from host service could not be processed locally.",
+                    "configuration": None,
+                    "error": exception_to_error_details(InvalidConfigurationError("{e}"))
+                })
 
-    def report_status(self, payload: dict) -> ReportStatusResponse:
+    def report_status(self, payload: dict) -> ReportStatusResponseContent:
         """
-        Report status-schema compliant payload to the host service:
+        Report compliant status payload to the host service:
         Publishing is internally rate limited (See Throttle).
         Service will handle throttling enforcement by disconnecting or revoking the device if this is a problem.
 
@@ -501,20 +511,19 @@ class CddSdk(object):
 
             def validate_and_publish():
                 try:
-                    # Validate the status message against the status-schema
-                    self.schema_registry.validate_status(payload=payload)
+                    # Validate and get the model
+                    status_model = validate_status(payload)
+
                 except Exception as e:
                     # Report failure to service (original behavior)
                     logger.exception(f"Invalid status payload: {e}")
                     raise InvalidStatusMessageError(str(e))
 
-                # This should never happen since the state must be CONNECTED.
-                topics = self.certs.get_topics()
-
-                # Publish the actual message
+                # Publish the actual message - use model.to_dict() for camelCase
                 try:
-                    status_message = ReportMessage(message=payload)
-                    self._do_publish_message(status_message, topics.report_status)
+                    host = self.certs.get_connected_host_settings()
+                    camel_payload = status_model.to_dict()
+                    self._do_publish_message(json.dumps(camel_payload), host.pub_report_status_topic)
                 except Exception as e:
                     logger.exception(f"Can't publish status. Msg: {e}")
                     raise e
@@ -530,17 +539,21 @@ class CddSdk(object):
             except ReportStatusError as e:
                 success, message, exception = False, "Status update not sent", e
             except InvalidStatusMessageError as e:
-                success, message, exception = False, "Status Send Failed. Schema Validation Failure", e
+                success, message, exception = False, "Status Send Failed.  Validation Failure", e
             except Exception as e:
                 logger.exception(f"Error in report_status: {e}")
                 success, message, exception = False, f"Status update not sent: {e}", e
 
-            return ReportStatusResponse(success=success, state=self.state,
-                                        message=message, exception=exception)
+            return ReportStatusResponseContent.from_dict({
+                "success": success, 
+                "state": self.state.value,
+                "message": message, 
+                "error": exception_to_error_details(exception)
+            })
 
-    def report_configuration(self, payload: dict) -> ReportConfigurationResponse:
+    def report_configuration(self, payload: dict) -> ReportActualConfigurationResponseContent:
         """
-        Report the actual (current device state) configuration-schema compliant payload to the host service:
+        Report the actual (current device state) configuration compliant payload to the host service:
         Nominally a device should apply the configuration returned from get_configuration() API request.
         However, circumstances might result in a difference such as 1) A local device-user override. 2) One or more
         fields in the desired configuration could not be applied or a delay in applying.
@@ -565,17 +578,18 @@ class CddSdk(object):
 
             def validate_and_publish():
                 try:
-                    # Validate the actual schema message against the status-schema
-                    self.schema_registry.validate_configuration(payload=payload)
+                    # Validate and get the model
+                    config_model = validate_configuration(payload)
                 except Exception as e:
                     # Report failure to service (original behavior)
                     logger.exception(f"Invalid configuration payload: {e}")
                     raise InvalidConfigurationError(str(e))
 
-                # Publish the actual message
+                # Publish the actual message - use model.to_dict() for camelCase
                 try:
-                    config_message = ReportMessage(message=payload)
-                    self._do_publish_message(config_message, self.certs.get_topics().report_actual_configuration)
+                    host = self.certs.get_connected_host_settings()
+                    camel_payload = config_model.to_dict()
+                    self._do_publish_message(json.dumps(camel_payload), host.pub_report_actual_configuration_topic)
                 except Exception as e:
                     logger.exception(f"Can't publish configuration. Msg: {e}")
                     raise e
@@ -591,19 +605,23 @@ class CddSdk(object):
             except ReportStatusError as e:
                 success, message, exception = False, "Configuration update not sent", e
             except InvalidConfigurationError as e:
-                success, message, exception = False, "Configuration Send Failed. Schema Validation Failure", e
+                success, message, exception = False, "Configuration Send Failed.  Validation Failure", e
             except Exception as e:
                 logger.exception(f"Error in report_configuration: {e}")
                 success, message, exception = False, f"Configuration update not sent: {e}", e
 
-            return ReportConfigurationResponse(success=success, state=self.state,
-                                        message=message, exception=exception)
+            return ReportActualConfigurationResponseContent.from_dict({
+                "success": success,
+                "state": self.state.value,
+                "message": message,
+                "error": exception_to_error_details(exception)
+            })
 
 
     #
     # PRIVATE METHODS ---------------------------------------------------
     #
-    def _do_publish_message(self, message: ReportMessage, topic: str):
+    def _do_publish_message(self, message: str, topic: str):
 
         # Publish registration is attempted immediately on on_connect() callback.
         # Can retry here in case that asynchronous attempt failed.
@@ -614,7 +632,7 @@ class CddSdk(object):
         publish_message(
             client=self.mqtt_client,
             topic=topic,
-            payload=json.dumps(cattr.unstructure(message)),
+            payload=message,
             qos=0,
             retain=False,
         )
@@ -622,11 +640,7 @@ class CddSdk(object):
     # ACK: The callback for when the client receives a CONNACK response from the server.
     def _on_connect(self, client, userdata, flags, reason_code):
         """
-        Subscribes to required topics and reports the schema.
-
-        Side effect:
-            Records delivery success of the schema to enable re-try and informing the client
-            on subsequent report_status() requests.
+        Subscribes to required topics and sends the client supplied registration JSON
 
         Raises:
             ConnectError: Unlikely since CONNECTED state is checked but being asynchronous a race condition is
@@ -647,13 +661,6 @@ class CddSdk(object):
 
         logger.info("ON CONNECT CALLBACK: code " + str(reason_code))
         self._transition(States.CONNECTED)
-        # Subscribing in on_connect() means that if we lose the connection and
-        # reconnect then subscriptions will be renewed.
-
-        # This should never happen since we are in the CONNECTED state but callback might have been queued.
-        topics = self.certs.get_topics()
-        if not topics or not self.mqtt_client:
-            raise ConnectError(details="Unable to subscribe while not connected")
 
         def subscribe_to_topic(topic, callback):
             try:
@@ -663,15 +670,19 @@ class CddSdk(object):
                 raise ConnectError(details=f"Client is unable to subscribe to: {topic}.")
 
         # Subscribe to all required topics
-        subscribe_to_topic(topics.update_configuration, self._update_configuration_callback)
-        subscribe_to_topic(topics.update_certs, self._update_certs_callback)
-        subscribe_to_topic(topics.update_thumbnail, self._update_thumbnail_subscription_callback)
-        subscribe_to_topic(topics.deprovision_inform_client, self._deprovision_device_callback)
-        subscribe_to_topic(topics.update_log, self._update_log_subscription_callback)
+        try:
+            host = self.certs.get_connected_host_settings()
+            subscribe_to_topic(host.sub_update_topic, self._update_configuration_callback)
+            subscribe_to_topic(host.sub_update_certs_topic, self._update_certs_callback)
+            subscribe_to_topic(host.sub_update_thumbnail_subscription_topic, self._update_thumbnail_subscription_callback)
+            subscribe_to_topic(host.sub_deprovision_topic, self._deprovision_device_callback)
+            subscribe_to_topic(host.sub_update_log_subscription_topic, self._update_log_subscription_callback)
 
-        self._report_registration()  # Service will ignore all but the first schema reported by this device_id.
-        self._registration_delivered = True
-
+            # Service will ignore all but the first instance reported by this device_id.
+            self._report_registration()
+            self._registration_delivered = True
+        except Exception as e:
+            logger.exception(f"Error in _on_connect: {e}")
 
     def _on_disconnect(self, client, userdata, flags):
         """
@@ -700,7 +711,7 @@ class CddSdk(object):
         else:
             logger.info(f"MQTT Log: {level}: {buf}")
 
-    def _start_connect(self) -> ConnectResponse:
+    def _start_connect(self) -> ConnectResponseContent:
         """
         Attempts a connection once it has been determined a connection can happen: certs are available.
 
@@ -709,22 +720,25 @@ class CddSdk(object):
 
         """
         if self._is([States.RECONNECTING, States.CONNECTED]):
-            return ConnectResponse(
-                success=True,
-                state=self.state,
-                message="Already connected or automatically re-connecting",
-                device_id=self.certs.get_device_id(),
-                region=self.certs.get_region(),
-            )
+            return ConnectResponseContent.from_dict({
+                "success": True,
+                "state": self.state.value,
+                "message": "Already connected or automatically re-connecting",
+                "deviceId": self.certs.get_device_id(),
+                "region": self.certs.get_region(),
+            })
 
         if self.mqtt_client and self.state == States.CONNECTING:
-            return ConnectResponse(success=True,
-                                   state=self.state,
-                                   message="Connecting",
-                                   )
+            return ConnectResponseContent.from_dict({
+                "success": True,
+                "state": self.state.value,
+                "message": "Connecting",
+            })
 
         try:
             # State will remain CONNECTING until on_connect() callback-> CONNECTED or an exception here -> DISCONNECTED
+            # Protocol Requires clean_session = True to guarantee QOS-0,
+            # non-persist messages (e.g., Reboot now) are NOT received when the device connects.
             self._transition(States.CONNECTING)
             self.mqtt_client = mqtt.Client(
                 client_id=self.certs.get_device_id(),
@@ -738,7 +752,7 @@ class CddSdk(object):
             self.mqtt_client.on_disconnect = self._on_disconnect
             self.mqtt_client.on_log = self._on_log
             # Using 1 here since we don't want to accumulate a backlog of status messages.
-            # Reporting a schema is QOS=1. Will send first and will occupy the in-flight slot
+            # Reporting a registration is QOS=1.  The SDK shall send this first and occupy the in-flight slot
             # until delivered.
             self.mqtt_client.max_inflight_messages_set(1)
             self.mqtt_client.max_queued_messages_set(1)
@@ -749,13 +763,13 @@ class CddSdk(object):
             # thread and stay alive to handle pub/sub activities, keep alive, etc.
             self.mqtt_client.loop_start()
 
-            return ConnectResponse(
-                success=True,
-                state=self.state,
-                message="Connection started",
-                region=self.certs.get_region(),
-                device_id=self.certs.get_device_id(),
-            )
+            return ConnectResponseContent.from_dict({
+                "success": True,
+                "state": self.state.value,
+                "message": "Connection started",
+                "region": self.certs.get_region(),
+                "deviceId": self.certs.get_device_id(),
+            })
 
         except Exception as e:
             logger.exception(f"Error in _start_connect: {e}")
@@ -764,14 +778,14 @@ class CddSdk(object):
             # This is likely the most common error/exception encountered by the host application
             # as it is entirely possible for the users to initiate connections while the device
             # doesn't have an available network connection, is firewall blocked, etc.
-            return ConnectResponse(
-                success=False,
-                state=self.state,
-                message=f"Unable to connect at this time. Check network connection.",
-                exception=ConnectError(
+            return ConnectResponseContent.from_dict({
+                "success": False,
+                "state": self.state.value,
+                "message": "Unable to connect at this time. Check network connection.",
+                "error": exception_to_error_details(ConnectError(
                     "Unable to make initial connection. Check network connection"
-                ),
-            )
+                )),
+            })
 
     def _connect(self):
 
@@ -821,19 +835,17 @@ class CddSdk(object):
             raise InvalidConfigurationError(details=str(e.msg))
 
         try:
-            # Validate the configuration message against the configuration-schema
-            self.schema_registry.validate_configuration(payload=config)
-            logger.info("Got a valid update config")
+            # Check the smithy-generated configuration model in ../generated-sdk/python/openapi_client/models
+            # Pydantic handles camelCase via aliases, store as-is
+            device_configuration: DeviceConfiguration = validate_configuration(config)
             # Increments the update_id and saves the payload.
-            self.configuration.update_configuration(payload=config)
+            # Must use from_dict() - pydantic constructors don't auto-convert nested dicts to models
+            self.configuration = ConfigurationData.from_dict({
+                "payload": device_configuration.to_dict(),
+                "updateId": self.update_id.get()
+            })
         except Exception as e:
-            # Validation failure here can only happen if the service failed to validate.
-            # Regardless, the SDK will perform its own validation here.
-
-            # This is an asynchronous callback.
-            # Persist the error in the Configuration class to inform the next get_configuration() Response.
-            self.configuration.update_configuration(callback_error=True)
-            raise InvalidConfigurationError(details=f"Schema Validation Error: {e}")
+            raise InvalidConfigurationError(details=f"Validation Error: {e}")
 
     def _update_certs_callback(self, client, userdata, message):
         """
@@ -855,7 +867,8 @@ class CddSdk(object):
         """
         try:
             payload = json.loads(message.payload.decode("utf-8"))
-            certs_rotate: CertRotate = cattr.structure(payload, CertRotate)
+            # Pydantic model handles camelCase via aliases
+            certs_rotate: RotateCertificatesRequestContent = RotateCertificatesRequestContent.from_dict(payload)
             logger.info(f"Got updated credentials rotate message.")
         except Exception as e:
             raise CertificatesRotationError(details="Msg: {e}.")
@@ -865,11 +878,12 @@ class CddSdk(object):
             # Persistent cert message will be handled on a new message or on_connect
             if self.certs.rotate_certs(certs_rotate):
                 host_id = self.host_id
+                registration = self.registration
                 # Caller may see DISCONNECTED/CONNECTING while this processes...may take a few seconds.
                 logger.info(f"Momentarily reconnecting using new credentials.")
                 self.disconnect()
                 time.sleep(1)
-                self.connect(host_id)
+                self.connect(registration=registration, host_id=host_id)
             else:
                 logger.info(f"Device cert not changed.  No action taken.")
 
@@ -893,46 +907,48 @@ class CddSdk(object):
         """
         try:
             tn_json = json.loads(message.payload.decode("utf-8"))
-            logger.info(f"Got a new thumbnail subscription request: {tn_json}")
-            self.thumbnail_manager.update_thumbnail(tn_json)
+            # Pydantic model handles camelCase via aliases
+            thumbnail_subscription = RequestThumbnailRequestContent.from_dict({
+                "requests": tn_json
+            })
+            logger.info(f"Got a new thumbnail subscription request")
+            self.thumbnail_manager.update_thumbnail(thumbnail_subscription)
         except json.JSONDecodeError as e:
             raise InvalidThumbnailSubscription(details=f"Thumbnail subscription: Could not parse.  Msg: {e}") from e
 
     def _report_registration(self):
         """
-        Report the schema to the host service. Service might only accept this once per session.
+        Report the registration to the host service. Service might only accept this once per session.
 
         Raises:
             ConnectionError: For all MQTT publish error codes.
-            ReportSchemaError
+            ReportRegistrationError
         """
         if not self._is(States.CONNECTED):
-            logger.info("Can't report schema when not connected")
-            raise ReportSchemaError(details="Can't report schema when not connected")
+            raise ReportRegistrationError(details="Can't report registration when not connected")
 
         try:
-            str_payload = json.dumps(self.schema_registry.load_json_file(self.registration_file))
+            # Validate and convert registration to camelCase for MQTT
+            registration_model = validate_registration(self.registration)
+            camel_registration = registration_model.to_dict()
+            str_payload = json.dumps(camel_registration)
         except Exception as e:
-            raise ReportSchemaError(details=str(e)) from e
+            raise ReportRegistrationError(details=str(e)) from e
 
-        # This should never happen since we are in the CONNECTED state.
-        topics = self.certs.get_topics()
-        if not topics or not self.mqtt_client:
-            raise ConnectError(details="Unable to report schema while not connected")
-
-        # QOS:1 at least once to ensure delivery for CONNECTED state since the schema must be available
+        # QOS:1 at least once to ensure delivery for CONNECTED state since the registration must be available
         # to the service.
-        logger.info("Reporting Schema")
+        logger.info("Reporting Registration")
         try:
+            host = self.certs.get_connected_host_settings()
             publish_message(
                 client=self.mqtt_client,
-                topic=topics.report_registration,
+                topic=host.pub_report_registration_topic,
                 payload=str_payload,
                 qos=1,
                 retain=False,
             )
         except Exception as e:
-            raise ReportSchemaError(details=str(e)) from e
+            raise ReportRegistrationError(details=str(e)) from e
 
         # Informs the class this has been done and need not be re-sent.
         logger.info("Registration delivered")
@@ -956,12 +972,14 @@ class CddSdk(object):
 
     def _deprovision_device_callback(self, client, userdata, message):
         """
-        Callback on service deporvisioning the client.  SDK Will reset the connection. Subsequent calls to connect()
-        will not be successful as the service has invalidated the certs.
+        Callback on service deprovisioning the client. The SDK Will reset the connection and delete credentials.
+        The final state here is DISCONNECTED
+        Subsequent calls to connect() will start PAIRING
         """
         try:
             message_json: dict = json.loads(message.payload.decode("utf-8"))
-            deprovision_message: DeprovisionMessage = cattr.structure(message_json, DeprovisionMessage)
+            # Pydantic model handles camelCase via aliases
+            deprovision_message: DeprovisionDeviceRequestContent = DeprovisionDeviceRequestContent.from_dict(message_json)
             logger.info(f"Service deprovisioned client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
             # Acknowledge the deprovisioning, then reset the connection to force a re-pairing.
             self._handle_deprovision(host_id=self.host_id)
@@ -986,7 +1004,9 @@ class CddSdk(object):
             Persists any error validating the log subscription, and if found are included in the above Response.
         """
         try:
-            self._log_request = cattr.structure(json.loads(message.payload.decode("utf-8")), LogRequest)
+            payload = json.loads(message.payload.decode("utf-8"))
+            # Pydantic model handles camelCase via aliases
+            self._log_request = RequestLogRequestContent.from_dict(payload)
             # Updated Request?
             logger.info(f"Got new log request.")
             self.logger.dump()  # Immediately send the latest, we either just connected or a new request came.
@@ -1009,7 +1029,7 @@ class CddSdk(object):
                 # This message of course will of course be sent in the next batch of logs messages.
                 logger.error(f"Log spew detected.  Last log spew detected at {self._log_spew_detected}.")
                 self._log_spew_detected = 0
-            if self._log_request.is_valid():
+            if self._log_request.remote_path and self._log_request.expires > int(time.time()):
                 logger.info(f"Pushing Logs.")
                 upload_file(log_file_path, self._log_request.remote_path, 5, file_type="log")
             elif self._log_request.expires < int(time.time()):
@@ -1026,22 +1046,20 @@ class CddSdk(object):
         if self._connected_to(host_id):
             logger.info(f"Publishing deprovision message to host service. {host_id}")
             try:
-                deprovision_message = DeprovisionMessage(
-                    reason=DeprovisionReason.DEPROVISIONED,
-                    time=int(time.time())
-                )
-                str_payload = json.dumps(cattr.unstructure(deprovision_message))
+                host = self.certs.get_connected_host_settings()
+                deprovision_message = DeprovisionDeviceRequestContent.from_dict({
+                    "reason": DeprovisionReason.DEPROVISIONED.value,
+                    "time": int(time.time())
+                })
+                # Use model.to_dict() for camelCase
+                camel_payload = deprovision_message.to_dict()
+                str_payload = json.dumps(camel_payload)
             except Exception as e:
                 raise DeprovisionError(details=str(e)) from e
 
-            # This should never happen since we are in the CONNECTED state.
-            topics = self.certs.get_topics()
-            if not topics or not self.mqtt_client:
-                raise ConnectError(details="Unable to report deprovision while not connected")
-
             publish_message(
                 client=self.mqtt_client,
-                topic=topics.deprovision_inform_service,
+                topic=host.pub_deprovision_topic,
                 payload=str_payload,
                 qos=1,
                 retain=False,
@@ -1049,6 +1067,10 @@ class CddSdk(object):
             time.sleep(3)  # Let the message be sent, plenty of time.
 
     def _handle_deprovision(self, host_id: str):
+        """
+        Implements deprovision whether initiated by the client or host service.
+        Final State: DISCONNECTED
+        """
         try:
             if not self._connected_to(host_id):
                 # When not connected, we simply delete credentials
@@ -1060,19 +1082,22 @@ class CddSdk(object):
                     self._inform_host_service_deprovision(host_id=host_id)
                 except Exception as e:
                     logger.exception(f"Error informing host service of deprovisioning. Msg: {e}")
-                # Complete deletion of credentials.
-                self._delete_credentials(host_id=host_id)
-                self._reset()
+
+                try:
+                    self._delete_credentials(host_id=host_id)
+                except Exception as e:
+                    logger.exception(f"Error deleting credentials. Msg: {e}")
+
         except Exception as e:
             raise DeprovisionError(details=str(e)) from e
-
+        finally:
+            self._reset()
 
     def _delete_credentials(self, host_id: str):
         # when not connected just
         if not self.host_id or self.host_id == host_id:
             logger.info(f"Deleting credentials for {host_id}.")
             CredentialStore(self.certs_path, self.device_local_id, host_id).deprovision()
-            self._reset()
 
     def _connected_to(self, host_id: str):
         return self._is(States.CONNECTED) and host_id == self.host_id

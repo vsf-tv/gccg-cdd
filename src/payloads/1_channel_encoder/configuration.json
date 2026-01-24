@@ -1,25 +1,43 @@
 {
+  "simpleSettings": [
+      {
+        "key": "sync_clock_source",
+        "value": "NTP"
+      }
+  ],
   "channels": [
     {
       "id": "CH01",
       "state": "ACTIVE",
-      "settings": [
-        { "id": "RS01", "value": "1920x1080" },
-        { "id": "FR01", "value": "60" },
-        { "id": "CBR1", "value": 8000 },
-        { "id": "INP", "value": "SDI1"}
-      ],
-      "setting_profile": {
-        "id": "h264c"
+      "settings": {
+        "simpleSettings": [
+          {
+            "key": "RS01",
+            "value": "1920x1080"
+          },
+          {
+            "key": "FR01",
+            "value": "60"
+          },
+          {
+            "key": "CBR1",
+            "value": "8000"
+          },
+          {
+            "key": "INP",
+            "value": "SDI1"
+          }
+        ]
       },
       "connection": {
-        "transport_protocol": {
-          "srt_caller": {
+        "transportProtocol": {
+          "srtCaller": {
             "ip": "3.213.165.124",
             "port": 2001,
-            "latency_ms": 150,
-            "stream_id": "discovery1",
+            "minimumLatencyMilliseconds": 150,
+            "streamId": "discovery1",
             "encryption": {
+              "none": {}
             }
           }
         }

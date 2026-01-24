@@ -11,15 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
 import os
 import json
 import requests
+import random
+import string
 import time
 import ssl
 import paho.mqtt.client as mqtt
-import threading
 from collections import deque
-from models import OnlineStates
 from custom_exceptions import MQTTPublishError
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -28,7 +29,10 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from custom_exceptions import SystemIntegrationError, UploadError
 from custom_logger import logger
+from internal_api_client.models.get_host_config_response_content import GetHostConfigResponseContent
 
+# Simple UUID for the subscribed configuration update ID.
+UPDATE_ID_SIZE = 5
 
 def publish_message(client, topic: str, payload: str, qos: int, retain: bool):
     """
@@ -48,6 +52,16 @@ def publish_message(client, topic: str, payload: str, qos: int, retain: bool):
         return
 
     raise MQTTPublishError(details=f"MQTT publish error. Response Code: {result}")
+
+
+@dataclass
+class UpdateID(object):
+    base = "".join(random.choices(string.ascii_letters, k=UPDATE_ID_SIZE))
+    sequence = 0
+
+    def get(self):
+        self.sequence += 1
+        return f"{self.base}_{self.sequence}"
 
 
 class Throttle(object):
@@ -80,10 +94,6 @@ class Throttle(object):
         
         self.publish_times.append(now)
         return True
-
-def validate_file_exists(filepath: str):
-    if not os.path.exists(filepath):
-        raise IOError(f"The file {filepath} does not exist")
 
 
 def validate_path_exists_and_writeable(path: str):
@@ -195,18 +205,16 @@ def generate_csr(private_key_pem: str) -> str:
     return csr.public_bytes(serialization.Encoding.PEM).decode('utf-8')
 
 
-def get_json_from_host_configuration_dir(filename: str):
-    # Get the directory containing the current script.
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Navigate to the target file relative to current script location.
-    file_path = os.path.join(current_dir, "host_configuration", filename)
-    # Normalize the path (handles different OS path separators and resolves .. notation).
-    file = os.path.normpath(file_path)
+def get_host_configuration(host_id: str) -> GetHostConfigResponseContent:
+    """
+    Locates the host configuration file in its expected location within the SDK @src/host_configuration/
+    """
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "host_configuration", f"{host_id}.json")
     try:
-        with open(file, "r") as f:
-            return json.load(f)
+        with open(file_path, "r") as f:
+            return GetHostConfigResponseContent.from_dict(json.load(f))
     except Exception as e:
-        raise SystemIntegrationError(details=f"Unable to read: {filename} Msg: {e}")
+        raise SystemIntegrationError(details=f"Unable to locate host_configuration: {file_path}  Msg: {e}")
 
 
 def validate_template(template: dict, config: dict, err_str: str):
@@ -230,75 +238,6 @@ def validate_template(template: dict, config: dict, err_str: str):
         if required_type == "int":
             if not isinstance(value, int):
                 raise SystemIntegrationError(details=f"Invalid {err_str} Key: {key} Expected Type: {required_type}")
-
-
-class NetworkUtils(object):
-    def __init__(self, online_urls: list[str]):
-        # Https more precisely represents online with Port 443 https access
-        self.www_sites = online_urls
-        self.online = False
-        return
-
-    def is_device_online(self):
-        for site in self.www_sites:
-            if self._check_online(site):
-                self.online = True
-                return True
-            logger.info(f"Online check. Unable to reach: {site}")
-        self.online = False
-        logger.info("Determined device is offline")
-        return False
-
-
-    # Online check looks for TCP connection
-    @staticmethod
-    def _check_online(site):
-        try:
-            _ = requests.get(site, timeout=2)
-            return True
-        except Exception as e:
-            logger.info(f"Could not connect to: {site} mes: {e}")
-        return False
-
-
-class OnlineChecker(threading.Thread):
-    """
-    Periodically checks if the device is online by polling public GET https request to sites provided by host_config.
-
-    User should instantiate this class and call <instance>.start()
-    Obtain online most recent online state: OnlineStates with <instance>.online
-    See: models: OnlineStates
-    """
-
-    network_utils: NetworkUtils = None
-
-    def __init__(self, online_urls: list[str]):
-        super().__init__()
-        self.network_utils = NetworkUtils(online_urls)
-        self._stop_event = threading.Event()
-        self.online: OnlineStates = OnlineStates.UNKNOWN
-
-    def get_online_state(self):
-        return self.online
-
-    def run(self):
-        while not self._stop_event.is_set():
-            # There is some delay in this call...might take a few seconds for this class to return a valid online state
-            try:
-                self.online = OnlineStates.ONLINE if self.network_utils.is_device_online() else OnlineStates.OFFLINE
-            except Exception as e:
-                logger.exception(f"Error checking online state: {e}")
-                self.online = OnlineStates.UNKNOWN
-
-            for _ in range(100):  # 10 seconds total interval
-                if self._stop_event.is_set():
-                    return
-                time.sleep(0.1)
-
-    def stop(self):
-        self._stop_event.set()
-        if self.is_alive():
-            self.join()  # ensure garbage collection is performed
 
 
 def upload_file(local_path, presigned_put_remote_path: str, timeout: int, file_type: str):

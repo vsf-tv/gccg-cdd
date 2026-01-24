@@ -20,29 +20,42 @@ import signal
 import subprocess
 import os
 import json
-import requests
 from requests.exceptions import Timeout
+from typing import Optional
+
+from openapi_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
+from openapi_client import Configuration, ApiClient
+from openapi_client.api.default_api import DefaultApi
+from openapi_client.models.connect_request_content import ConnectRequestContent
+from openapi_client.models.connect_response_content import ConnectResponseContent
+from openapi_client.models.device_registration import DeviceRegistration
+from openapi_client.models.report_status_request_content import ReportStatusRequestContent
+from openapi_client.models.report_status_response_content import ReportStatusResponseContent
+from openapi_client.models.device_status import DeviceStatus
+from openapi_client.models.channel_state import ChannelState
+from openapi_client.models.report_actual_configuration_request_content import ReportActualConfigurationRequestContent
+from openapi_client.models.device_configuration import DeviceConfiguration
+from openapi_client.models.get_configuration_response_content import GetConfigurationResponseContent
 
 INITIAL_CONFIG_ID = ""  # identical to the SDK initial configuration update_id when no config has been obtained.
 
-
-#  TODO: Status json is read from a file and only a few params are updated.  Make status update complete and
-#    based on values from the underlying encoder/decoder/.  Possibly add RTP support.
-
+#  TODO: Status json is read from the payloads/status.sjon file
+#   Only a few params are updated.
+#   Make status update based on values from the underlying encoder/decoder/.
 
 # Client API endpoints.
-PORT: int = 8603  # Ensure this matches the port used to start the discovery client SDK.
-CONNECT = f"http://127.0.0.1:{PORT}/connect"
-DISCONNECT = f"http://127.0.0.1:{PORT}/disconnect"
-REPORT_STATUS = f"http://127.0.0.1:{PORT}/report_status"
-REPORT_ACTUAL_CONFIGURATION = f"http://127.0.0.1:{PORT}/report_actual_configuration"
-GET_CONFIGURATION = f"http://127.0.0.1:{PORT}/get_configuration"
-DEPROVISION = f"http://127.0.0.1:{PORT}/deprovision"
+PORT: int = 8603
+
+# Configure API client SDK auto generated from the smithy cdd_sdk definitions.
+api_configuration = Configuration(host=f"http://127.0.0.1:{PORT}")
+api_client = ApiClient(api_configuration)
+api_instance = DefaultApi(api_client)
 
 # From project source root.
-current_dir = os.path.dirname(os.path.abspath(__file__))
-STATUS_JSON_FILE = os.path.join(current_dir, "status.json")
-
+current_dir = Path(os.path.abspath(__file__)).parent
+payloads_dir = Path(current_dir).parent / "payloads"
+STATUS_JSON_FILE = current_dir / "status.json"
+REGISTRATION_JSON_FILE = payloads_dir / "1_channel_encoder" / "registration.json"
 
 def get_simulated_bitrate() -> str:
     """
@@ -75,67 +88,50 @@ class Encoder(object):
     def _update_encoder_config(self, updated_config: dict):
         self.config_payload = updated_config
 
-    def get_encoder_status(self):
+    def get_encoder_status(self) -> dict:
         """
         (Currently) This application reference design reads and makes minor changes to status that is read from a file.
         In practice, a real application should generate a complete status based on the current state.
 
         Returns:
-            A status-schema compliant status payload that represents the current encoder status.
+            A DeviceStatus TR12 model json dictionary
         """
         try:
             with (open(STATUS_JSON_FILE, "r") as f):
                 self.status_payload = json.load(f)
+
+                # Ensure channels exists
+                if not self.status_payload.get("channels"):
+                    self.status_payload["channels"] = []
+                
                 if not self.running():
                     self.status_payload["channels"][0]["state"] = "IDLE"
                     self.status_payload["channels"][0]["status"] = [
-                        {'name': 'encoder_bitrate', 'value': '0', 'info': 'Bitrate Mbps configured on the video encoder.'},
+                        {'name': 'bitrate', 'value': '0', 'info': 'Bitrate Mbps configured on the video encoder.'},
                         {'name': 'cpu', 'value': '21', 'info': 'Current CPU % utilization.'},
                         {'name': 'temp', 'value': '72', 'info': 'CPU in degrees C.'}
                     ]
-                    self.status_payload["channels"][0]["connection"]["metrics"] = {
-                        "total_packets": 0,
-                        "dropped_packets": 0,
-                        "recovered_packets": 0,
-                        "unrecovered_packets": 0,
-                        "resent_packets": 0,
-                        "fec_packets": 0,
-                        "fec_recovered_packets": 0,
-                        "rtt": 0,
-                        "rtt_variance": 0
-                    }
                 else:
                     self.status_payload["channels"][0]["state"] = "ACTIVE"
                     self.status_payload["channels"][0]["status"] = [
-                        {'name': 'encoder_bitrate', 'value': get_simulated_bitrate(), 'info': 'Bitrate Mbps configured on the video encoder.'},
+                        {'name': 'bitrate', 'value': get_simulated_bitrate(), 'info': 'Bitrate Mbps configured on the video encoder.'},
                         {'name': 'cpu', 'value': '61', 'info': 'Current CPU % utilization.'},
                         {'name': 'temp', 'value': '84', 'info': 'CPU in degrees C.'}
                     ]
-                    self.status_payload["channels"][0]["connection"]["metrics"] = {
-                        "total_packets": 10132,
-                        "dropped_packets": 23,
-                        "recovered_packets": 7,
-                        "unrecovered_packets": 0,
-                        "resent_packets": 23,
-                        "fec_packets": 0,
-                        "fec_recovered_packets": 0,
-                        "rtt": 12,
-                        "rtt_variance": 1
-                    }
 
         except Exception as e:
             print(f"Error Updating status: {e}")
 
         return self.status_payload
 
-    def start(self, str_settings: dict):
+    def start(self, str_settings: SrtCallerTransportProtocol):
 
         # A client application should restart if params change while running.
         if not self.running():
             print(f"************* Starting *****************")
-            ip = str_settings["ip"]
-            port = str_settings["port"]
-            stream_id = str_settings["stream_id"]
+            ip = str_settings.ip
+            port = str_settings.port
+            stream_id = str_settings.stream_id
             cmd = f"ffmpeg -f avfoundation -framerate 30 -video_size 640x480 -i 0 -vcodec libx264 -f mpegts srt://{ip}:{port}/{stream_id}"
             print(f"command: {cmd}")
             self.process = subprocess.Popen(
@@ -179,59 +175,58 @@ class Encoder(object):
         else:
             print("Already stopped")
 
-    def handle_update(self, update_message: dict):
+    def handle_update(self, device_configuration: DeviceConfiguration) -> bool:
         """
         Handles an update message from the underlying application.
 
         Args:
-            update_message: A schema compliant configuration message.
+            configuration: DeviceConfiguration open-api generated model
 
         Note: This function comprehends the instance schema that it provided to the SDK on SDK Start.
                The SDK validated the service-provided configuration message conforms to the schema.
                As a result, we can confidently parse the configuration JSON here.
         """
-        if not update_message:
-            print("No update available")
-            return
+        if not device_configuration:
+            print("No configuration to process")
+            return False
 
-        print(f"Got an update: {update_message}")
+        print(f"Got an update: {device_configuration.to_str()}")
 
         try:
-            state = (
-                update_message
-                .get("channels", [{}])[0]
-                .get("state")
-            )
-            srt_settings = (
-                update_message
-                .get("channels", [{}])[0]
-                .get("connection", {})
-                .get("transport_protocol", {})
-                .get("srt_caller")
-            )
+            state = device_configuration.channels[0].state
+            # The model is kind of funny in how it names the polymorphic types for the various transport protocols.
+            instance =  device_configuration.channels[0].connection.transport_protocol.actual_instance
+            if not instance:
+                print(f"Missing transport protocol")
+                return False
 
-            if state == "IDLE":
+            if state == ChannelState.IDLE:
                 print(f"Calling stop")
                 self.stop()
-            if state == "ACTIVE" and srt_settings:
-                print(f"Calling Start")
-                if self.running() and self.srt_settings == srt_settings:
-                    print("Already running with same settings")
-                    return  # No change, ignore
+                return True
+            if state == ChannelState.ACTIVE:
+                if hasattr(instance, 'srt_caller'):
+                    print(f"Calling Start")
+                    if self.running() and instance.srt_caller == self.srt_settings:
+                        print("Already running with same settings (ip at least)")
+                        return True
 
-                # Stop then re-Start if the settings changed.
-                if (
-                    self.running()
-                    and self.srt_settings
-                    and self.srt_settings != srt_settings
-                ):
-                    self.stop()
+                    # Stop then re-Start if the settings changed.
+                    if (
+                        self.running()
+                        and self.srt_settings
+                        and self.srt_settings != instance.srt_caller
+                    ):
+                        self.stop()
 
-                self.srt_settings = srt_settings
-                self.start(srt_settings)
+                    self.srt_settings = instance.srt_caller
+                    self.start(instance.srt_caller)
+
 
         except Exception as e:
             print(f"Unable to process command: {e}")
+
+        return True
 
 
 class ThumbnailSimulator(threading.Thread):
@@ -305,7 +300,7 @@ class ClientApplication(object):
         self.encoder = Encoder()
         self.running = True
         self.latest_configuration_id = INITIAL_CONFIG_ID
-        self.current_configuration: dict = {}
+        self.current_configuration: Optional[DeviceConfiguration] = None
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
         self.thumbnail_emitter_sdi = ThumbnailSimulator(
@@ -328,32 +323,38 @@ class ClientApplication(object):
         Alternatively, shutting down the client process will attempt to inform the service in it shutdown hanlder.
         """
         print("Received shutdown signal, cleaning up...")
-        response = requests.put(DISCONNECT, timeout=1)
+        try:
+            api_instance.disconnect()
+        except Exception as e:
+            print(f"Error during disconnect: {e}")
         self.running = False
 
     def report_status(self):
         """
         Report the current state of the system and the ffmpeg encoder.
-        TODO:  This application will provide a complete status based on the actual application status.
+        Makes a report_status request passing ReportStatusRequestContent()
+        TR12 API
         """
         status_payload = self.encoder.get_encoder_status()
-        response = requests.put(REPORT_STATUS, json=status_payload, timeout=5)
-        if response.status_code == 200:
-            sdk_response = parse_api_response(response)
-            print(
-                f"report_status Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
-                f" error: {sdk_response.get('error')}  message: {sdk_response.get('message')}"
-            )
-        else:
-            print(f"report_status Failed: {response.status_code} {response.text}")
+        device_status: DeviceStatus =  DeviceStatus.from_dict(status_payload)
+        req = ReportStatusRequestContent.from_dict({
+            "status": device_status.to_dict()
+        })
+        response: ReportStatusResponseContent = api_instance.report_status(report_status_request_content=req.to_dict())
+        
+        print(
+            f"report_status Success: {response.success}  State: {response.state}"
+            f" error: {response.error}  message: {response.message}"
+        )
 
     def report_actual_configuration(self):
         """
-        Reports the actual configuration of the system.  This function informs the
-        service which (ideally all) of the host-provided configuration has been
-        actually applied to the device settings.
+        Makes a report_actual_configuration request passing the ReportActualConfigurationRequestContent
 
-        The CDD Protocol explicitly requires the client system apply all desired configuration params
+        Reports the actual configuration of the system.  This function informs the
+        service about the complete, current state of the encoder device.
+
+        The CDD Protocol explicitly requires the client apply all desired configuration params
         and disallow local overrides while connected.
 
         The host service will treat all differences as:
@@ -372,53 +373,56 @@ class ClientApplication(object):
             print("No configuration to report")
             return
 
-        response = requests.put(REPORT_ACTUAL_CONFIGURATION, json=self.current_configuration, timeout=5)
-        if response.status_code == 200:
-            sdk_response = parse_api_response(response)
-            print(
-                f"report_actual_configuration Success: {sdk_response.get('success')}  State: {sdk_response.get('state')}"
-                f" error: {sdk_response.get('error')}  message: {sdk_response.get('message')}"
-            )
-        else:
-            print(f"report_actual_configuration Failed: {response.status_code} {response.text}")
+        req: ReportActualConfigurationRequestContent = ReportActualConfigurationRequestContent.from_dict({
+            "configuration": self.current_configuration.to_dict()
+        })
+        response = api_instance.report_actual_configuration(report_actual_configuration_request_content=req.to_dict())
+        
+        print(
+            f"report_actual_configuration Success: {response.success}  State: {response.state}"
+            f" error: {response.error}  message: {response.message}"
+        )
 
     def get_configuration(self) -> str:
         """
-        Obtains a configuration message.
+        makes a get_configuration request passing the GetConfigurationResponseContent
+
+        Gets the latest configuration message.
         Checks if the update_id changed, if so applies the change, otherwise ignores.
         """
-        response = requests.get(GET_CONFIGURATION, timeout=5)
+        response: GetConfigurationResponseContent = api_instance.get_configuration()
         update_id: str = ""
-        if response.status_code == 200:
-            sdk_response = parse_api_response(response)
-            print(
-                f"get_configuration Success: {sdk_response.get('success')} State: {sdk_response.get('state')}"
-                f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')}"
-                f" message: {sdk_response.get('message')} configuration: {sdk_response.get('configuration')}"
-            )
-            # See: get_configuration() response.
-            configuration: dict = sdk_response.get("configuration", {})
-            update_id: str = configuration.get("update_id", "")
-            configuration_payload: dict = configuration.get("payload", {})
+        
+        print(
+            f"get_configuration Success: {response.success} State: {response.state}"
+            f" error: {response.error}"
+            f" message: {response.message} configuration: {response.configuration}"
+        )
+        
+        if response.configuration:
+            update_id = response.configuration.update_id
+            device_configuration: DeviceConfiguration = response.configuration.payload
+            
             # ID is an arbitrary string. Check for a difference.
             # If there is no change (ie already processed based on the ID) then do nothing
             # because we've already processed this configuration.
             if update_id != self.latest_configuration_id:
                 print(f"New update. update_id: {update_id}")
                 self.latest_configuration_id = update_id
-                self.encoder.handle_update(configuration_payload)
+                success: bool = self.encoder.handle_update(device_configuration)
 
-                # This simple reference design application simply reflects the host-service-provided 'desired'
+                # This reference design application simply reflects the host-service-provided 'desired'
                 # configuration back to the host service as the 'actual' configuration. In real application,
                 # a local user might override one or more settings or for some reason be unable to comply with
                 # (part of) the desired configuration.  The application reports status and current configuration
                 # via the report_status() API.
                 # See: Host Service API: configuration: desired/actual.
-                self.current_configuration = configuration_payload
+                if success:
+                    self.current_configuration = device_configuration
 
         return update_id
 
-    def run_loop(self, host_id: str):
+    def run_loop(self, registration_dict: dict, host_id: str):
         """
         Guidance for client applications: (see: documentation: SDK API, SDK Reference Design).
 
@@ -475,52 +479,48 @@ class ClientApplication(object):
         """
         self.thumbnail_emitter_sdi.start()
         self.thumbnail_emitter_hdmi.start()
+
         while self.running:
             try:
                 print("........................")
-                response = requests.put(CONNECT, params={"host_id": host_id}, timeout=5)
-                if response.status_code == 200:
-                    sdk_response = parse_api_response(response)
-                    state = sdk_response.get('state')
+                reg: DeviceRegistration = DeviceRegistration.from_dict(registration_dict)
+                req: ConnectRequestContent = ConnectRequestContent.from_dict({
+                    "registration": reg.to_dict(),
+                    "hostId": host_id
+                })
+                resp: ConnectResponseContent = api_instance.connect(connect_request_content=req.to_dict())
+                print(
+                    f"run_loop Success: {resp.success} State: {resp.state} "
+                    f" error: {resp.error} DeviceID: {resp.device_id} "
+                    f" message: {resp.message}."
+                )
+
+                #
+                # PAIRING: If the SDK returns PAIRING then present the pairing_code to the user so the device
+                #          can be claimed in the service.
+                #
+                if resp.success and resp.state == "PAIRING":
                     print(
-                        f"run_loop Success: {sdk_response.get('success')} State: {state} "
-                        f" error: {sdk_response.get('error')} DeviceID: {sdk_response.get('device_id')} "
-                        f" message: {sdk_response.get('message')}."
+                        f"Device is not paired. Pairing Code: {resp.pairing_code} Expires in: {resp.expires}s."
                     )
 
-                    #
-                    # PAIRING: If the SDK returns PAIRING then present the pairing_code to the user so the device
-                    #          can be claimed in the service.
-                    #
-                    if (
-                        sdk_response.get("success")
-                        and state == "PAIRING"  # see (SDK models)
-                    ):
-                        print(
-                            f"Device is not paired. Pairing Code: {sdk_response.get('pairing_code')} Expires in: {sdk_response.get('expires')}s."
-                        )
+                #
+                # CONNECTED: send any status update, check for an updated configuration.
+                #
+                if resp.success and resp.state == "CONNECTED":
+                    # The service will respond for any state but best to only call these when the SDK is CONNECTED
+                    # so that messages sent/received are handled and current.
+                    update_id = self.get_configuration()
 
-                    #
-                    # CONNECTED: send any status update, check for an updated configuration.
-                    #
-                    if sdk_response.get("success") and state in [
-                        "CONNECTED"
-                    ]:  # See (SDK models.py).
-                        # The service will respond for any state but best to only call these when the SDK is CONNECTED
-                        # so that messages sent/received are handled and current.
-                        update_id = self.get_configuration()
+                    # Be careful here...the SDK and Service will throttle if you exceed pub limits.
+                    # This application calls pub every 3 seconds, which requires a host min pub interval < 3s
+                    # The VSF test host min pub interval is 5s.
+                    # This application will only call report_status() when something interesting has changed.
+                    # Consider that minor differences like a small temp/bitrate change is probably not worth reporting.
+                    # See: report_status() API guidance.
+                    self.report_status()
+                    self.report_actual_configuration()
 
-                        # Be careful here...the SDK and Service will throttle if you exceed pub limits.
-                        # This application calls pub every 3 seconds, which requires a host min pub interval < 3s
-                        # The VSF test host min pub interval is 5s.
-                        # This application will only call report_status() when something interesting has changed.
-                        # Consider that minor differences like a small temp/bitrate change is probably not worth reporting.
-                        # See: report_status() API guidance.
-                        self.report_status()
-                        self.report_actual_configuration()
-
-                else:
-                    print(f"Connection failed. Status code: {response.status_code}")
             except Timeout:
                 print("Connection timed out. Retrying...")
             except Exception as e:
@@ -542,9 +542,11 @@ def parse_api_response(response) -> dict:
 
 
 def main(host_id: str):
-    c = ClientApplication()
-    print(f"Connecting to: {host_id}")
-    c.run_loop(host_id=host_id)
+    with open(REGISTRATION_JSON_FILE, "r") as f:
+        registration_dict = json.load(f)
+        c = ClientApplication()
+        print(f"Connecting to: {host_id}")
+        c.run_loop(registration_dict=registration_dict, host_id=host_id)
 
 
 if __name__ == "__main__":

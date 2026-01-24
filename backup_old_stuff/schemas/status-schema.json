@@ -23,16 +23,6 @@
           },
           "status": {
             "$ref": "#/$defs/array_of_name_and_value"
-          },
-          "connection": {
-            "type": "object",
-            "properties": {
-              "metrics": {
-                "description": "Real-time transport metrics for the channel's active protocol.",
-                "$ref": "definitions/transport_protocols/arq_metrics.json#/$defs/arq_metrics"
-              }
-            },
-            "additionalProperties": false
           }
         },
         "additionalProperties": false

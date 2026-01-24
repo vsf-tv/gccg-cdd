@@ -3,7 +3,7 @@ import os.path
 from logging.handlers import (
     RotatingFileHandler
 )
-from service_api_models import JsonFormatter
+from cdd_internal_models import JsonFormatter
 from pathlib import Path
 
 LOG_FILE_MAX_BYTES = 500 * 1000  # Host API specification: MAX Limit = 500 KB Size of each log file.
