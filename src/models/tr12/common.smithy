@@ -158,9 +158,9 @@ structure CertRotate {
 }
 
 enum DeprovisionReason {
-    DEPROVISIONED = "DEPROVISIONED",
-    EXPIRED = "EXPIRED",
-    UNKNOWN = "UNKNOWN"
+    DEPROVISIONED
+    EXPIRED
+    UNKNOWN
 }
 
 structure DeprovisionMessage {

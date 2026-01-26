@@ -28,6 +28,11 @@ union SettingsChoice {
     profileSetting: SettingProfile
 }
 
+union RistStreamIdentifier {
+    synchronizationSource: Integer,
+    streamId: String
+}
+
 structure SettingProfile {
     @required
     id: String
@@ -74,10 +79,13 @@ union TransportProtocol {
 structure SrtListenerTransportProtocol {
     streamId: String,
     @required
+    @range(min: 1024, max: 65535)
     port: Integer,
     @required
+    @default(3000)
     minimumLatencyMilliseconds: Integer,
-    encryption: Encryption
+    encryption: Encryption,
+    interface: String
 }
 
 structure SrtCallerTransportProtocol {
@@ -85,28 +93,33 @@ structure SrtCallerTransportProtocol {
     @required
     ip: String,
     @required
+    @range(min: 1, max: 65535)
     port: Integer,
     @required
+    @default(3000)
     minimumLatencyMilliseconds: Integer,
     encryption: Encryption
 }
 
 structure RistListenerTransportProtocol {
-    streamId: String,
+    streamId: RistStreamIdentifier,
     @required
     port: Integer,
     @required
+    @default(3000)
     minimumLatencyMilliseconds: Integer,
     encryption: Encryption
+    interface: String
 }
 
 structure RistCallerTransportProtocol {
-    streamId: String,
+    streamId: RistStreamIdentifier,
     @required
     ip: String,
     @required
     port: Integer,
     @required
+    @default(3000)
     minimumLatencyMilliseconds: Integer,
     encryption: Encryption
 }
@@ -117,8 +130,10 @@ structure ZixiListenerTransportProtocol {
     @required
     port: Integer,
     @required
+    @default(3000)
     minimumLatencyMilliseconds: Integer,
     encryption: Encryption
+    interface: String
 }
 
 structure ZixiCallerTransportProtocol {
@@ -129,6 +144,7 @@ structure ZixiCallerTransportProtocol {
     @required
     port: Integer,
     @required
+    @default(3000)
     minimumLatencyMilliseconds: Integer,
     encryption: Encryption
 }
