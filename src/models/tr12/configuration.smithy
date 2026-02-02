@@ -25,7 +25,7 @@ structure ChannelConfiguration {
 
 union SettingsChoice {
     simpleSettings: IdAndValueList,
-    profileSetting: SettingProfile
+    profile: SettingProfile
 }
 
 union RistStreamIdentifier {

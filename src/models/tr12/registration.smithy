@@ -23,7 +23,7 @@ structure Channel {
     id: String,
     channelType: ChannelType,
     simpleSettings: SettingsList,
-    profileSetting: ProfileList,
+    profiles: ProfileList,
     connectionProtocols: ProtocolList
 }
 

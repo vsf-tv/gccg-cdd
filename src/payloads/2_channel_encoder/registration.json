@@ -15,13 +15,13 @@
   "channels": [
     {
       "name": "Encoder Channel 1",
-      "id": "CHA1",
+      "id": "CH01",
       "channelType": "SOURCE",
       "connectionProtocols": [
         "SRT_CALLER",
         "SRT_LISTENER"
       ],
-      "profileSettings": [
+      "profiles": [
         {
           "name": "h264_contribution_compact",
           "id": "h264c",
@@ -141,7 +141,7 @@
     },
     {
       "name": "Encoder Channel 2",
-      "id": "CHA2",
+      "id": "CH02",
       "channelType": "SOURCE",
       "connectionProtocols": [
         "srt_caller",

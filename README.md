@@ -232,94 +232,56 @@ Requried:
 > python --version 
 ```
 
+
 Step 1:
-```bash
-2) Install Smithy
-
-   a) MAC > brew install smithy
-   b) LINUX/PC/Other: See: https://github.com/smithy-lang/smithy/  
-```
-
-Step 3:
-```bash
-Build the open-api models from the TR12 Smithy definitions.  
-
-This creates a python 'SDK'
- - Models and Validators for the CDD SDK local APis
- - Models and Validators for the TR12 Protocol 
- 
-Createed in: 
-src/generatedSDKInternalpython 
-src/geberatedSDKpython 
-  
-  This uses smithy-build.json and smithy-build-internal.json
-   > cd <sdk root>
-   > smithy build 
-   > ./generate-sdk.sh python
-   > (Optional) /generate-sdk.sh <your application langauge>
-   
-  
-  
-  
-  
-
-```
-
-## TR12 Smithy/OpenAPI definition
-```bash
-The CDD SDK implements the TR12 protocol.  This means API calls to the service have defined request and reponse models.
-While those models could be defined as text or schema, modern APIs use frameworks that take a concise definition and 
-can automatically generate code needed to call those apis, construct valid request/response models in many different languages.
-
-CDD protocol is literally defined by a handful of SMITHY files in:  "src/models".  Not only does the ARD and CDD SDK use 
-these generated models to host the local rest API, but uses them to communicate with the host service.  
-Importantly, the device application integrating the SDK can also generate models in just about any language
- required: C++, Python, Typescript and others.  Simply:  
-    > ./generate-sdk.sh [typescript|cpp-tiny|cpp-aotapp-client|cpp-restsdk]
-    
-    Output created in: gccg-cdd/generatedSDK<language>/  
-    
-    When it comes time to integrated the CDD SDK into your applicaiton, simply import the above dependencies into your application.  
-  
-There are a variety of supported languages.  See: https://github.com/smithy-lang/awesome-smithy
-```
-
-Step 4:
 ```bash
 Clone and cd into the CDD package
 > git clone https://github.com/vsf-tv/gccg-cdd
-> cd gccg-cdd
+> cd gccg-cdd ( the CDK Root dir )
 > ls
 You should see a src/ dir and requirements.txt   
 ```
 
-Step 5:
+Step 2:
 ```bash
 nstall a python virtual environment
 > python3 -m venv venv
 ```
 
-Step 6:
+Step 3:
 ```bash
 Activate your python virtual environment
 > source venv/bin/activate
 ```
 
 Step 4:
-```bash
-Set  PYTHONPATH so the SDK can find the generated open-api models.
-> cd gccg--cdd
-> source setup_env.sh 
-```
-
-Step 5:
 
 ```bash
 Install python external dependencies (listed in requirements.txt) into your python virtual env.
 > pip3 install -r requirements.txt
 ````
 
+(Optional: Not needed for the ARD demo)
+```bash
+ Install Smithy
+ This is only needed if your intention is integrate the SDK into a c++ or other non-python application. 
 
+   a) MAC > brew install smithy
+   b) LINUX/PC/Other: See: https://github.com/smithy-lang/smithy/  
+     
+Build the open-api models from the TR12 Smithy definitions.  This creates a python 'SDK'
+ - Models and Validators for the CDD SDK local APis
+ - Models and Validators for the TR12 Protocol 
+ 
+The Createed in: 
+src/generatedSDK<language>
+  
+  This uses smithy-build.json and smithy-build-internal.json
+   > cd <sdk root>
+   > smithy build 
+   > ./generate-sdk.sh <your application langauge>
+   
+```
 
 ### Start the CDD SDK and use the Application Reference Design (ARD)
 The following step run the Application Reference Design (ARD) and CDD SDK.  

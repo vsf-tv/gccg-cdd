@@ -1,6 +1,6 @@
 {
     "serviceId": "vsf_test_host",
-    "service_Name": "Test Host for CDD open-source repository",
+    "serviceName": "Test Host for CDD open-source repository",
     "deviceTypes": ["SOURCE", "DESTINATION", "BOTH"],
     "pairingUrl": "https://8am5ccbkx2.execute-api.us-east-1.amazonaws.com/Stage",
     "authUrl": "https://nm3atje1zj.execute-api.us-east-1.amazonaws.com/Stage",

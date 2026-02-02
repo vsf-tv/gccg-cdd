@@ -5,6 +5,7 @@ use com.example.cdd.common#ChannelState
 
 structure DeviceStatus {
     @required
+    status: StatusValueList
     channels: ChannelStatusList
 }
 
