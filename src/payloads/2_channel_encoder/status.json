@@ -1,38 +1,51 @@
 {
+  "status": [
+    {
+      "name": "model",
+      "value": "Talon",
+      "info": "Hardware device model identifier."
+    },
+    {
+      "name": "serial",
+      "value": "123456789",
+      "info": "Device serial number."
+    },
+    {
+      "name": "manufacturer",
+      "value": "Osprey",
+      "info": "Device manufacturer name."
+    },
+    {
+      "name": "cpu",
+      "value": "41%",
+      "info": "Current CPU utilization."
+    },
+    {
+      "name": "temp",
+      "value": "80c",
+      "info": "Current system temperature."
+    }
+  ],
   "channels": [
     {
       "id": "CH01",
       "state": "IDLE",
       "status": [
         {
-          "name": "model",
-          "value": "Talon",
-          "info": "Hardware device model identifier."
-        },
+          "name": "bitrate-bps",
+          "value": "20000",
+          "info": "Actual bitrate."
+        }
+      ]
+    },
+    {
+      "id": "CH02",
+      "state": "IDLE",
+      "status": [
         {
-          "name": "serial",
-          "value": "123456789",
-          "info": "Device serial number."
-        },
-        {
-          "name": "manufacturer",
-          "value": "Osprey",
-          "info": "Device manufacturer name."
-        },
-        {
-          "name": "encoder_bitrate",
-          "value": "20000bps",
-          "info": "Bitrate configured on the video encoder."
-        },
-        {
-          "name": "cpu",
-          "value": "41%",
-          "info": "Current CPU utilization."
-        },
-        {
-          "name": "temp",
-          "value": "80c",
-          "info": "Current system temperature."
+          "name": "bitrate-bps",
+          "value": "0",
+          "info": "Actual bitrate."
         }
       ]
     }

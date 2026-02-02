@@ -195,6 +195,7 @@ class Encoder(object):
         try:
             state = device_configuration.channels[0].state
             # The model is kind of funny in how it names the polymorphic types for the various transport protocols.
+            # A multi-channel device should really reconcile the channel config by channel ID field.
             instance =  device_configuration.channels[0].connection.transport_protocol.actual_instance
             if not instance:
                 print(f"Missing transport protocol")
