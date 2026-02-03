@@ -53,6 +53,7 @@ __all__ = [
     "GetConnectionStatusResponseContent",
     "IdAndValue",
     "Profile",
+    "ProfileDefinition",
     "RangeValues",
     "ReportActualConfigurationRequestContent",
     "ReportActualConfigurationResponseContent",
@@ -123,6 +124,7 @@ from openapi_client.models.get_configuration_response_content import GetConfigur
 from openapi_client.models.get_connection_status_response_content import GetConnectionStatusResponseContent as GetConnectionStatusResponseContent
 from openapi_client.models.id_and_value import IdAndValue as IdAndValue
 from openapi_client.models.profile import Profile as Profile
+from openapi_client.models.profile_definition import ProfileDefinition as ProfileDefinition
 from openapi_client.models.range_values import RangeValues as RangeValues
 from openapi_client.models.report_actual_configuration_request_content import ReportActualConfigurationRequestContent as ReportActualConfigurationRequestContent
 from openapi_client.models.report_actual_configuration_response_content import ReportActualConfigurationResponseContent as ReportActualConfigurationResponseContent

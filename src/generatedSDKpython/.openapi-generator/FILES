@@ -29,6 +29,7 @@ docs/GetConfigurationResponseContent.md
 docs/GetConnectionStatusResponseContent.md
 docs/IdAndValue.md
 docs/Profile.md
+docs/ProfileDefinition.md
 docs/RangeValues.md
 docs/ReportActualConfigurationRequestContent.md
 docs/ReportActualConfigurationResponseContent.md
@@ -91,6 +92,7 @@ openapi_client/models/get_configuration_response_content.py
 openapi_client/models/get_connection_status_response_content.py
 openapi_client/models/id_and_value.py
 openapi_client/models/profile.py
+openapi_client/models/profile_definition.py
 openapi_client/models/range_values.py
 openapi_client/models/report_actual_configuration_request_content.py
 openapi_client/models/report_actual_configuration_response_content.py
@@ -127,4 +129,5 @@ setup.cfg
 setup.py
 test-requirements.txt
 test/__init__.py
+test/test_profile_definition.py
 tox.ini

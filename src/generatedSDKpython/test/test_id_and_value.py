@@ -35,13 +35,11 @@ class TestIdAndValue(unittest.TestCase):
         model = IdAndValue()
         if include_optional:
             return IdAndValue(
-                id = '',
+                key = '',
                 value = ''
             )
         else:
             return IdAndValue(
-                id = '',
-                value = '',
         )
         """
 

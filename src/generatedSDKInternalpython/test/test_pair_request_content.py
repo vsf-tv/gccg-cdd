@@ -37,13 +37,15 @@ class TestPairRequestContent(unittest.TestCase):
             return PairRequestContent(
                 device_type = '',
                 host_id = '',
-                csr = ''
+                csr = '',
+                version = ''
             )
         else:
             return PairRequestContent(
                 device_type = '',
                 host_id = '',
                 csr = '',
+                version = '',
         )
         """
 

@@ -35,19 +35,17 @@ class TestRistCallerTransportProtocol(unittest.TestCase):
         model = RistCallerTransportProtocol()
         if include_optional:
             return RistCallerTransportProtocol(
-                stream_id = '',
-                mode = '',
+                stream_id = None,
                 ip = '',
                 port = 1.337,
-                latency_ms = 1.337
+                minimum_latency_milliseconds = 1.337,
+                encryption = None
             )
         else:
             return RistCallerTransportProtocol(
-                stream_id = '',
-                mode = '',
                 ip = '',
                 port = 1.337,
-                latency_ms = 1.337,
+                minimum_latency_milliseconds = 1.337,
         )
         """
 

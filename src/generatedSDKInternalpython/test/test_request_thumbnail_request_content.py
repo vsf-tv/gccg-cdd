@@ -39,7 +39,7 @@ class TestRequestThumbnailRequestContent(unittest.TestCase):
                     'key' : internal_api_client.models.thumbnail_request.ThumbnailRequest(
                         period = 1.337, 
                         expires = 1.337, 
-                        max_size_kb = 1.337, 
+                        max_size_kilobyte = 1.337, 
                         local_path = '', 
                         remote_path = '', )
                     }
@@ -50,7 +50,7 @@ class TestRequestThumbnailRequestContent(unittest.TestCase):
                     'key' : internal_api_client.models.thumbnail_request.ThumbnailRequest(
                         period = 1.337, 
                         expires = 1.337, 
-                        max_size_kb = 1.337, 
+                        max_size_kilobyte = 1.337, 
                         local_path = '', 
                         remote_path = '', )
                     },

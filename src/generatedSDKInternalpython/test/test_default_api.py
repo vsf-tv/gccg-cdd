@@ -44,6 +44,12 @@ class TestDefaultApi(unittest.TestCase):
         """
         pass
 
+    def test_get_version(self) -> None:
+        """Test case for get_version
+
+        """
+        pass
+
     def test_pair(self) -> None:
         """Test case for pair
 

@@ -37,15 +37,15 @@ class TestSrtCallerTransportProtocol(unittest.TestCase):
             return SrtCallerTransportProtocol(
                 stream_id = '',
                 ip = '',
-                port = 1.337,
-                latency_ms = 1.337
+                port = 1,
+                minimum_latency_milliseconds = 1.337,
+                encryption = None
             )
         else:
             return SrtCallerTransportProtocol(
-                stream_id = '',
                 ip = '',
-                port = 1.337,
-                latency_ms = 1.337,
+                port = 1,
+                minimum_latency_milliseconds = 1.337,
         )
         """
 

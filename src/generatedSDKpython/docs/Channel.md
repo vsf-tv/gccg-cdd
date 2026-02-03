@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **id** | **str** |  | 
 **channel_type** | [**ChannelType**](ChannelType.md) |  | [optional] 
 **simple_settings** | [**List[Setting]**](Setting.md) |  | [optional] 
-**profiles** | [**List[Profile]**](Profile.md) |  | [optional] 
+**profiles** | [**List[ProfileDefinition]**](ProfileDefinition.md) |  | [optional] 
 **connection_protocols** | [**List[SupportedProtocol]**](SupportedProtocol.md) |  | [optional] 
 
 ## Example

@@ -36,6 +36,12 @@ class TestReportStatusRequestContent(unittest.TestCase):
         if include_optional:
             return ReportStatusRequestContent(
                 status = openapi_client.models.device_status.DeviceStatus(
+                    status = [
+                        openapi_client.models.status_value.StatusValue(
+                            name = '', 
+                            info = '', 
+                            value = '', )
+                        ], 
                     channels = [
                         openapi_client.models.channel_status.ChannelStatus(
                             id = '', 
@@ -51,6 +57,12 @@ class TestReportStatusRequestContent(unittest.TestCase):
         else:
             return ReportStatusRequestContent(
                 status = openapi_client.models.device_status.DeviceStatus(
+                    status = [
+                        openapi_client.models.status_value.StatusValue(
+                            name = '', 
+                            info = '', 
+                            value = '', )
+                        ], 
                     channels = [
                         openapi_client.models.channel_status.ChannelStatus(
                             id = '', 

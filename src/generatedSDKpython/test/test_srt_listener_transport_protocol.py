@@ -36,15 +36,15 @@ class TestSrtListenerTransportProtocol(unittest.TestCase):
         if include_optional:
             return SrtListenerTransportProtocol(
                 stream_id = '',
-                ip = '',
-                port = 1.337,
-                latency_ms = 1.337
+                port = 1024,
+                minimum_latency_milliseconds = 1.337,
+                encryption = None,
+                interface = ''
             )
         else:
             return SrtListenerTransportProtocol(
-                ip = '',
-                port = 1.337,
-                latency_ms = 1.337,
+                port = 1024,
+                minimum_latency_milliseconds = 1.337,
         )
         """
 

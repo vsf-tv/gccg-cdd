@@ -36,20 +36,20 @@ class TestRistListener(unittest.TestCase):
         if include_optional:
             return RistListener(
                 rist_listener = openapi_client.models.rist_listener_transport_protocol.RistListenerTransportProtocol(
-                    stream_id = '', 
-                    mode = '', 
-                    ip = '', 
+                    stream_id = null, 
                     port = 1.337, 
-                    latency_ms = 1.337, )
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, 
+                    interface = '', )
             )
         else:
             return RistListener(
                 rist_listener = openapi_client.models.rist_listener_transport_protocol.RistListenerTransportProtocol(
-                    stream_id = '', 
-                    mode = '', 
-                    ip = '', 
+                    stream_id = null, 
                     port = 1.337, 
-                    latency_ms = 1.337, ),
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, 
+                    interface = '', ),
         )
         """
 

@@ -56,14 +56,14 @@ class TestConnectRequestContent(unittest.TestCase):
                                         max = 1.337, 
                                         default_value = 1.337, ), )
                                 ], 
-                            profile_setting = [
+                            profiles = [
                                 openapi_client.models.profile.Profile(
                                     name = '', 
                                     id = '', 
                                     info = '', )
                                 ], 
                             connection_protocols = [
-                                'srt_listener'
+                                'SRT_LISTENER'
                                 ], )
                         ], 
                     simple_settings = [
@@ -103,14 +103,14 @@ class TestConnectRequestContent(unittest.TestCase):
                                         max = 1.337, 
                                         default_value = 1.337, ), )
                                 ], 
-                            profile_setting = [
+                            profiles = [
                                 openapi_client.models.profile.Profile(
                                     name = '', 
                                     id = '', 
                                     info = '', )
                                 ], 
                             connection_protocols = [
-                                'srt_listener'
+                                'SRT_LISTENER'
                                 ], )
                         ], 
                     simple_settings = [

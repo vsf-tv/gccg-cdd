@@ -44,7 +44,20 @@ class TestGetConfigurationResponseContent(unittest.TestCase):
                     details = '', ),
                 configuration = openapi_client.models.configuration_data.ConfigurationData(
                     update_id = '', 
-                    payload = null, )
+                    payload = openapi_client.models.device_configuration.DeviceConfiguration(
+                        channels = [
+                            openapi_client.models.channel_configuration.ChannelConfiguration(
+                                id = '', 
+                                state = 'ACTIVE', 
+                                settings = null, 
+                                connection = openapi_client.models.connection.Connection(
+                                    transport_protocol = null, ), )
+                            ], 
+                        simple_settings = [
+                            openapi_client.models.id_and_value.IdAndValue(
+                                key = '', 
+                                value = '', )
+                            ], ), )
             )
         else:
             return GetConfigurationResponseContent(

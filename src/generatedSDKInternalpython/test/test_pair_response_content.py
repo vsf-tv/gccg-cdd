@@ -35,17 +35,11 @@ class TestPairResponseContent(unittest.TestCase):
         model = PairResponseContent()
         if include_optional:
             return PairResponseContent(
-                device_id = '',
-                pairing_code = '',
-                access_code = '',
-                pairing_timeout_seconds = 1.337
+                result = None
             )
         else:
             return PairResponseContent(
-                device_id = '',
-                pairing_code = '',
-                access_code = '',
-                pairing_timeout_seconds = 1.337,
+                result = None,
         )
         """
 

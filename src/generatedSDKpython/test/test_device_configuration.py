@@ -45,7 +45,7 @@ class TestDeviceConfiguration(unittest.TestCase):
                     ],
                 simple_settings = [
                     openapi_client.models.id_and_value.IdAndValue(
-                        id = '', 
+                        key = '', 
                         value = '', )
                     ]
             )

@@ -35,15 +35,13 @@ class TestProfile(unittest.TestCase):
         model = Profile()
         if include_optional:
             return Profile(
-                name = '',
-                id = '',
-                info = ''
+                profile = openapi_client.models.setting_profile.SettingProfile(
+                    id = '', )
             )
         else:
             return Profile(
-                name = '',
-                id = '',
-                info = '',
+                profile = openapi_client.models.setting_profile.SettingProfile(
+                    id = '', ),
         )
         """
 

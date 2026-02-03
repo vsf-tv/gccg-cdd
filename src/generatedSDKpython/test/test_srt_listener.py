@@ -37,17 +37,19 @@ class TestSrtListener(unittest.TestCase):
             return SrtListener(
                 srt_listener = openapi_client.models.srt_listener_transport_protocol.SrtListenerTransportProtocol(
                     stream_id = '', 
-                    ip = '', 
-                    port = 1.337, 
-                    latency_ms = 1.337, )
+                    port = 1024, 
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, 
+                    interface = '', )
             )
         else:
             return SrtListener(
                 srt_listener = openapi_client.models.srt_listener_transport_protocol.SrtListenerTransportProtocol(
                     stream_id = '', 
-                    ip = '', 
-                    port = 1.337, 
-                    latency_ms = 1.337, ),
+                    port = 1024, 
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, 
+                    interface = '', ),
         )
         """
 
