@@ -35,7 +35,7 @@ class TestAuthenticateResponseContent(unittest.TestCase):
         model = AuthenticateResponseContent()
         if include_optional:
             return AuthenticateResponseContent(
-                status = '',
+                status = 'STANDBY',
                 ca_cert = '',
                 device_cert = '',
                 mqtt_uri = '',
@@ -58,7 +58,7 @@ class TestAuthenticateResponseContent(unittest.TestCase):
             )
         else:
             return AuthenticateResponseContent(
-                status = '',
+                status = 'STANDBY',
         )
         """
 

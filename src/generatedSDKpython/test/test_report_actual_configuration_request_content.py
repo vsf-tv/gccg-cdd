@@ -35,7 +35,7 @@ class TestReportActualConfigurationRequestContent(unittest.TestCase):
         model = ReportActualConfigurationRequestContent()
         if include_optional:
             return ReportActualConfigurationRequestContent(
-                configuration = openapi_client.models.router_device_configuration.RouterDeviceConfiguration(
+                configuration = openapi_client.models.device_configuration.DeviceConfiguration(
                     channels = [
                         openapi_client.models.channel_configuration.ChannelConfiguration(
                             id = '', 
@@ -46,13 +46,13 @@ class TestReportActualConfigurationRequestContent(unittest.TestCase):
                         ], 
                     simple_settings = [
                         openapi_client.models.id_and_value.IdAndValue(
-                            id = '', 
+                            key = '', 
                             value = '', )
                         ], )
             )
         else:
             return ReportActualConfigurationRequestContent(
-                configuration = openapi_client.models.router_device_configuration.RouterDeviceConfiguration(
+                configuration = openapi_client.models.device_configuration.DeviceConfiguration(
                     channels = [
                         openapi_client.models.channel_configuration.ChannelConfiguration(
                             id = '', 
@@ -63,7 +63,7 @@ class TestReportActualConfigurationRequestContent(unittest.TestCase):
                         ], 
                     simple_settings = [
                         openapi_client.models.id_and_value.IdAndValue(
-                            id = '', 
+                            key = '', 
                             value = '', )
                         ], ),
         )

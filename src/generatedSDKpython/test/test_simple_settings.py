@@ -37,7 +37,7 @@ class TestSimpleSettings(unittest.TestCase):
             return SimpleSettings(
                 simple_settings = [
                     openapi_client.models.id_and_value.IdAndValue(
-                        id = '', 
+                        key = '', 
                         value = '', )
                     ]
             )
@@ -45,7 +45,7 @@ class TestSimpleSettings(unittest.TestCase):
             return SimpleSettings(
                 simple_settings = [
                     openapi_client.models.id_and_value.IdAndValue(
-                        id = '', 
+                        key = '', 
                         value = '', )
                     ],
         )

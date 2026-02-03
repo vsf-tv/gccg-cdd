@@ -38,8 +38,7 @@ class TestEncryption(unittest.TestCase):
                 aes128 = openapi_client.models.encryption_aes128.EncryptionAes128(
                     passcode = '2012345678910111213141516171819202122232425262728293031', ),
                 aes256 = openapi_client.models.encryption_aes256.EncryptionAes256(
-                    passcode = '20123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263', ),
-                var_none = openapi_client.models.unit.Unit()
+                    passcode = '20123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263', )
             )
         else:
             return Encryption(
@@ -47,7 +46,6 @@ class TestEncryption(unittest.TestCase):
                     passcode = '2012345678910111213141516171819202122232425262728293031', ),
                 aes256 = openapi_client.models.encryption_aes256.EncryptionAes256(
                     passcode = '20123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263', ),
-                var_none = openapi_client.models.unit.Unit(),
         )
         """
 

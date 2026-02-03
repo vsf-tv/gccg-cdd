@@ -20,7 +20,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from openapi_client.models.channel_type import ChannelType
-from openapi_client.models.profile import Profile
+from openapi_client.models.profile_definition import ProfileDefinition
 from openapi_client.models.setting import Setting
 from openapi_client.models.supported_protocol import SupportedProtocol
 from typing import Optional, Set
@@ -34,7 +34,7 @@ class Channel(BaseModel):
     id: StrictStr
     channel_type: Optional[ChannelType] = Field(default=None, alias="channelType")
     simple_settings: Optional[List[Setting]] = Field(default=None, alias="simpleSettings")
-    profiles: Optional[List[Profile]] = None
+    profiles: Optional[List[ProfileDefinition]] = None
     connection_protocols: Optional[List[SupportedProtocol]] = Field(default=None, alias="connectionProtocols")
     __properties: ClassVar[List[str]] = ["name", "id", "channelType", "simpleSettings", "profiles", "connectionProtocols"]
 
@@ -107,7 +107,7 @@ class Channel(BaseModel):
             "id": obj.get("id"),
             "channelType": obj.get("channelType"),
             "simpleSettings": [Setting.from_dict(_item) for _item in obj["simpleSettings"]] if obj.get("simpleSettings") is not None else None,
-            "profiles": [Profile.from_dict(_item) for _item in obj["profiles"]] if obj.get("profiles") is not None else None,
+            "profiles": [ProfileDefinition.from_dict(_item) for _item in obj["profiles"]] if obj.get("profiles") is not None else None,
             "connectionProtocols": obj.get("connectionProtocols")
         })
         return _obj

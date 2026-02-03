@@ -37,20 +37,20 @@ class TestSettingsChoice(unittest.TestCase):
             return SettingsChoice(
                 simple_settings = [
                     openapi_client.models.id_and_value.IdAndValue(
-                        id = '', 
+                        key = '', 
                         value = '', )
                     ],
-                profile_setting = openapi_client.models.setting_profile.SettingProfile(
+                profile = openapi_client.models.setting_profile.SettingProfile(
                     id = '', )
             )
         else:
             return SettingsChoice(
                 simple_settings = [
                     openapi_client.models.id_and_value.IdAndValue(
-                        id = '', 
+                        key = '', 
                         value = '', )
                     ],
-                profile_setting = openapi_client.models.setting_profile.SettingProfile(
+                profile = openapi_client.models.setting_profile.SettingProfile(
                     id = '', ),
         )
         """

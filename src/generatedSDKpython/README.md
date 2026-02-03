@@ -120,6 +120,7 @@ Class | Method | HTTP request | Description
  - [GetConnectionStatusResponseContent](docs/GetConnectionStatusResponseContent.md)
  - [IdAndValue](docs/IdAndValue.md)
  - [Profile](docs/Profile.md)
+ - [ProfileDefinition](docs/ProfileDefinition.md)
  - [RangeValues](docs/RangeValues.md)
  - [ReportActualConfigurationRequestContent](docs/ReportActualConfigurationRequestContent.md)
  - [ReportActualConfigurationResponseContent](docs/ReportActualConfigurationResponseContent.md)

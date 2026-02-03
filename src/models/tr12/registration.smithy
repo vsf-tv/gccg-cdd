@@ -59,10 +59,10 @@ structure RangeValues {
 }
 
 list ProfileList {
-    member: Profile
+    member: ProfileDefinition
 }
 
-structure Profile {
+structure ProfileDefinition {
     @required
     name: String,
     @required

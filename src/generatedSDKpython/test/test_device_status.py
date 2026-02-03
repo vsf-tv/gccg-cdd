@@ -35,6 +35,12 @@ class TestDeviceStatus(unittest.TestCase):
         model = DeviceStatus()
         if include_optional:
             return DeviceStatus(
+                status = [
+                    openapi_client.models.status_value.StatusValue(
+                        name = '', 
+                        info = '', 
+                        value = '', )
+                    ],
                 channels = [
                     openapi_client.models.channel_status.ChannelStatus(
                         id = '', 
@@ -49,16 +55,11 @@ class TestDeviceStatus(unittest.TestCase):
             )
         else:
             return DeviceStatus(
-                channels = [
-                    openapi_client.models.channel_status.ChannelStatus(
-                        id = '', 
-                        state = 'ACTIVE', 
-                        status = [
-                            openapi_client.models.status_value.StatusValue(
-                                name = '', 
-                                info = '', 
-                                value = '', )
-                            ], )
+                status = [
+                    openapi_client.models.status_value.StatusValue(
+                        name = '', 
+                        info = '', 
+                        value = '', )
                     ],
         )
         """

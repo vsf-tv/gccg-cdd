@@ -37,17 +37,19 @@ class TestZixiListener(unittest.TestCase):
             return ZixiListener(
                 zixi_listener = openapi_client.models.zixi_listener_transport_protocol.ZixiListenerTransportProtocol(
                     stream_id = '', 
-                    ip = '', 
                     port = 1.337, 
-                    latency_ms = 1.337, )
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, 
+                    interface = '', )
             )
         else:
             return ZixiListener(
                 zixi_listener = openapi_client.models.zixi_listener_transport_protocol.ZixiListenerTransportProtocol(
                     stream_id = '', 
-                    ip = '', 
                     port = 1.337, 
-                    latency_ms = 1.337, ),
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, 
+                    interface = '', ),
         )
         """
 

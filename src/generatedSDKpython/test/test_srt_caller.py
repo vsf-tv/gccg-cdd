@@ -38,16 +38,18 @@ class TestSrtCaller(unittest.TestCase):
                 srt_caller = openapi_client.models.srt_caller_transport_protocol.SrtCallerTransportProtocol(
                     stream_id = '', 
                     ip = '', 
-                    port = 1.337, 
-                    latency_ms = 1.337, )
+                    port = 1, 
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, )
             )
         else:
             return SrtCaller(
                 srt_caller = openapi_client.models.srt_caller_transport_protocol.SrtCallerTransportProtocol(
                     stream_id = '', 
                     ip = '', 
-                    port = 1.337, 
-                    latency_ms = 1.337, ),
+                    port = 1, 
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, ),
         )
         """
 

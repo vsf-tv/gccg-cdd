@@ -36,20 +36,20 @@ class TestRistCaller(unittest.TestCase):
         if include_optional:
             return RistCaller(
                 rist_caller = openapi_client.models.rist_caller_transport_protocol.RistCallerTransportProtocol(
-                    stream_id = '', 
-                    mode = '', 
+                    stream_id = null, 
                     ip = '', 
                     port = 1.337, 
-                    latency_ms = 1.337, )
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, )
             )
         else:
             return RistCaller(
                 rist_caller = openapi_client.models.rist_caller_transport_protocol.RistCallerTransportProtocol(
-                    stream_id = '', 
-                    mode = '', 
+                    stream_id = null, 
                     ip = '', 
                     port = 1.337, 
-                    latency_ms = 1.337, ),
+                    minimum_latency_milliseconds = 1.337, 
+                    encryption = null, ),
         )
         """
 

@@ -35,11 +35,13 @@ class TestGetVersionResponseContent(unittest.TestCase):
         model = GetVersionResponseContent()
         if include_optional:
             return GetVersionResponseContent(
-                version = '0.0.1'
+                version = internal_api_client.models.protocol_version.ProtocolVersion(
+                    version = '1.0.0', )
             )
         else:
             return GetVersionResponseContent(
-                version = '0.0.1',
+                version = internal_api_client.models.protocol_version.ProtocolVersion(
+                    version = '1.0.0', ),
         )
         """
 
