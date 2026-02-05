@@ -19,7 +19,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict
 from typing import Any, ClassVar, Dict, List
-from openapi_client.models.encryption_aes256 import EncryptionAes256
+from openapi_client.models.device_encryption_aes256 import DeviceEncryptionAes256
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -27,7 +27,7 @@ class Aes256(BaseModel):
     """
     Aes256
     """ # noqa: E501
-    aes256: EncryptionAes256
+    aes256: DeviceEncryptionAes256
     __properties: ClassVar[List[str]] = ["aes256"]
 
     model_config = ConfigDict(
@@ -84,7 +84,7 @@ class Aes256(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "aes256": EncryptionAes256.from_dict(obj["aes256"]) if obj.get("aes256") is not None else None
+            "aes256": DeviceEncryptionAes256.from_dict(obj["aes256"]) if obj.get("aes256") is not None else None
         })
         return _obj
 

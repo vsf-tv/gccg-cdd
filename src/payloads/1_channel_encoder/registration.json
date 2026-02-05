@@ -105,8 +105,7 @@
           "enums": {
             "values": [
               "H.264",
-              "H.265",
-              "VP9"
+              "H.265"
             ],
             "defaultValue": "H.264"
           }

@@ -18,7 +18,7 @@ import re  # noqa: F401
 import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -26,8 +26,8 @@ class IdAndValue(BaseModel):
     """
     IdAndValue
     """ # noqa: E501
-    key: Optional[StrictStr] = None
-    value: Optional[StrictStr] = None
+    key: StrictStr
+    value: StrictStr
     __properties: ClassVar[List[str]] = ["key", "value"]
 
     model_config = ConfigDict(

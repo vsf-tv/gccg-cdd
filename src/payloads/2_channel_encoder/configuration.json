@@ -20,11 +20,23 @@
             "value": "60"
           },
           {
-            "key": "CBR1",
-            "value": 8000
+            "key": "MB01",
+            "value": "60"
           },
           {
-            "key": "INP",
+            "key": "RC01",
+            "value": "CBR"
+          },
+          {
+            "key": "GP01",
+            "value": "30"
+          },
+          {
+            "key": "CO01",
+            "value": "H.264"
+          },
+          {
+            "key": "IN01",
             "value": "SDI1"
           }
         ]
@@ -57,11 +69,23 @@
             "value": "60"
           },
           {
-            "key": "CBR1",
-            "value": 8000
+            "key": "MB01",
+            "value": "60"
           },
           {
-            "key": "INP",
+            "key": "RC01",
+            "value": "CBR"
+          },
+          {
+            "key": "GP01",
+            "value": "30"
+          },
+          {
+            "key": "CO01",
+            "value": "H.264"
+          },
+          {
+            "key": "IN01",
             "value": "SDI1"
           }
         ]

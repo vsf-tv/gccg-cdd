@@ -20,11 +20,23 @@
             "value": "60"
           },
           {
-            "key": "CBR1",
-            "value": "8000"
+            "key": "MB01",
+            "value": "60"
           },
           {
-            "key": "INP",
+            "key": "RC01",
+            "value": "CBR"
+          },
+          {
+            "key": "GP01",
+            "value": "30"
+          },
+          {
+            "key": "CO01",
+            "value": "H.264"
+          },
+          {
+            "key": "IN01",
             "value": "SDI1"
           }
         ]
@@ -35,10 +47,7 @@
             "ip": "3.213.165.124",
             "port": 2001,
             "minimumLatencyMilliseconds": 150,
-            "streamId": "discovery1",
-            "encryption": {
-              "none": {}
-            }
+            "streamId": "discovery1"
           }
         }
       }

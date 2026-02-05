@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **stream_id** | [**RistStreamIdentifier**](RistStreamIdentifier.md) |  | [optional] 
 **port** | **float** |  | 
 **minimum_latency_milliseconds** | **float** |  | [default to 3000]
-**encryption** | [**Encryption**](Encryption.md) |  | [optional] 
+**encryption** | [**DeviceEncryption**](DeviceEncryption.md) |  | [optional] 
 **interface** | **str** |  | [optional] 
 
 ## Example

@@ -7,8 +7,8 @@ use com.example.cdd.common#StringList
 
 structure DeviceRegistration {
     @required
-    channels: ChannelList,
-    simpleSettings: SettingsList,
+    channels: ChannelList
+    simpleSettings: SettingsList
     thumbnails: ThumbnailList
 }
 
@@ -18,7 +18,7 @@ list ChannelList {
 
 structure Channel {
     @required
-    name: String,
+    name: String
     @required
     id: String,
     channelType: ChannelType,
@@ -33,29 +33,31 @@ list SettingsList {
 
 structure Setting {
     @required
-    id: String,
+    id: String
     @required
-    name: String,
+    name: String
     @required
-    info: String,
-    enums: EnumValues,
+    info: String
+
+    //TODO: make this a sum type
+    enums: EnumValues
     ranges: RangeValues
 }
 
 structure EnumValues {
     @required
-    values: StringList,
+    values: StringList
     @required
     defaultValue: String
 }
 
 structure RangeValues {
     @required
-    min: Double,
+    min: Float
     @required
-    max: Double,
+    max: Float
     @required
-    defaultValue: Double
+    defaultValue: Float
 }
 
 list ProfileList {
@@ -64,9 +66,9 @@ list ProfileList {
 
 structure ProfileDefinition {
     @required
-    name: String,
+    name: String
     @required
-    id: String,
+    id: String
     @required
     info: String
 }
@@ -81,9 +83,9 @@ list ThumbnailList {
 
 structure Thumbnail {
     @required
-    name: String,
+    name: String
     @required
-    id: String,
+    id: String
     @required
     localPath: String
 }

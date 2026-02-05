@@ -241,7 +241,7 @@ if __name__ == "__main__":
     """
 
     # Prevents multiple instances of the SDK from running on one system.
-    lock = ensure_single_instance()
+    #lock = ensure_single_instance()
 
     parser = argparse.ArgumentParser(
         description="Client Device Discovery",

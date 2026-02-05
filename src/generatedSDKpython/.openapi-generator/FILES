@@ -17,12 +17,12 @@ docs/Connection.md
 docs/DefaultApi.md
 docs/DeprovisionResponseContent.md
 docs/DeviceConfiguration.md
+docs/DeviceEncryption.md
+docs/DeviceEncryptionAes128.md
+docs/DeviceEncryptionAes256.md
 docs/DeviceRegistration.md
 docs/DeviceStatus.md
 docs/DisconnectResponseContent.md
-docs/Encryption.md
-docs/EncryptionAes128.md
-docs/EncryptionAes256.md
 docs/EnumValues.md
 docs/ErrorDetails.md
 docs/GetConfigurationResponseContent.md
@@ -80,12 +80,12 @@ openapi_client/models/connect_response_content.py
 openapi_client/models/connection.py
 openapi_client/models/deprovision_response_content.py
 openapi_client/models/device_configuration.py
+openapi_client/models/device_encryption.py
+openapi_client/models/device_encryption_aes128.py
+openapi_client/models/device_encryption_aes256.py
 openapi_client/models/device_registration.py
 openapi_client/models/device_status.py
 openapi_client/models/disconnect_response_content.py
-openapi_client/models/encryption.py
-openapi_client/models/encryption_aes128.py
-openapi_client/models/encryption_aes256.py
 openapi_client/models/enum_values.py
 openapi_client/models/error_details.py
 openapi_client/models/get_configuration_response_content.py
@@ -129,5 +129,4 @@ setup.cfg
 setup.py
 test-requirements.txt
 test/__init__.py
-test/test_profile_definition.py
 tox.ini

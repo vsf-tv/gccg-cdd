@@ -20,7 +20,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional, Union
 from typing_extensions import Annotated
-from openapi_client.models.encryption import Encryption
+from openapi_client.models.device_encryption import DeviceEncryption
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -32,7 +32,7 @@ class SrtCallerTransportProtocol(BaseModel):
     ip: StrictStr
     port: Union[Annotated[float, Field(le=65535, strict=True, ge=1)], Annotated[int, Field(le=65535, strict=True, ge=1)]]
     minimum_latency_milliseconds: Union[StrictFloat, StrictInt] = Field(alias="minimumLatencyMilliseconds")
-    encryption: Optional[Encryption] = None
+    encryption: Optional[DeviceEncryption] = None
     __properties: ClassVar[List[str]] = ["streamId", "ip", "port", "minimumLatencyMilliseconds", "encryption"]
 
     model_config = ConfigDict(
@@ -93,7 +93,7 @@ class SrtCallerTransportProtocol(BaseModel):
             "ip": obj.get("ip"),
             "port": obj.get("port"),
             "minimumLatencyMilliseconds": obj.get("minimumLatencyMilliseconds") if obj.get("minimumLatencyMilliseconds") is not None else 3000,
-            "encryption": Encryption.from_dict(obj["encryption"]) if obj.get("encryption") is not None else None
+            "encryption": DeviceEncryption.from_dict(obj["encryption"]) if obj.get("encryption") is not None else None
         })
         return _obj
 

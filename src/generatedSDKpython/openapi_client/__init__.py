@@ -41,12 +41,12 @@ __all__ = [
     "Connection",
     "DeprovisionResponseContent",
     "DeviceConfiguration",
+    "DeviceEncryption",
+    "DeviceEncryptionAes128",
+    "DeviceEncryptionAes256",
     "DeviceRegistration",
     "DeviceStatus",
     "DisconnectResponseContent",
-    "Encryption",
-    "EncryptionAes128",
-    "EncryptionAes256",
     "EnumValues",
     "ErrorDetails",
     "GetConfigurationResponseContent",
@@ -112,12 +112,12 @@ from openapi_client.models.connect_response_content import ConnectResponseConten
 from openapi_client.models.connection import Connection as Connection
 from openapi_client.models.deprovision_response_content import DeprovisionResponseContent as DeprovisionResponseContent
 from openapi_client.models.device_configuration import DeviceConfiguration as DeviceConfiguration
+from openapi_client.models.device_encryption import DeviceEncryption as DeviceEncryption
+from openapi_client.models.device_encryption_aes128 import DeviceEncryptionAes128 as DeviceEncryptionAes128
+from openapi_client.models.device_encryption_aes256 import DeviceEncryptionAes256 as DeviceEncryptionAes256
 from openapi_client.models.device_registration import DeviceRegistration as DeviceRegistration
 from openapi_client.models.device_status import DeviceStatus as DeviceStatus
 from openapi_client.models.disconnect_response_content import DisconnectResponseContent as DisconnectResponseContent
-from openapi_client.models.encryption import Encryption as Encryption
-from openapi_client.models.encryption_aes128 import EncryptionAes128 as EncryptionAes128
-from openapi_client.models.encryption_aes256 import EncryptionAes256 as EncryptionAes256
 from openapi_client.models.enum_values import EnumValues as EnumValues
 from openapi_client.models.error_details import ErrorDetails as ErrorDetails
 from openapi_client.models.get_configuration_response_content import GetConfigurationResponseContent as GetConfigurationResponseContent

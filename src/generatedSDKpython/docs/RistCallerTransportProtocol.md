@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **ip** | **str** |  | 
 **port** | **float** |  | 
 **minimum_latency_milliseconds** | **float** |  | [default to 3000]
-**encryption** | [**Encryption**](Encryption.md) |  | [optional] 
+**encryption** | [**DeviceEncryption**](DeviceEncryption.md) |  | [optional] 
 
 ## Example
 
