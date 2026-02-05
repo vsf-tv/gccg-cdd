@@ -258,6 +258,8 @@ Step 4:
 
 ```bash
 Install python external dependencies (listed in requirements.txt) into your python virtual env.
+This will also install the generatedSDKpython and generatedSDKInternalpython dependencies in the python venv
+> cd gccg-cdd  ( the CDK Root dir )
 > pip3 install -r requirements.txt
 ````
 

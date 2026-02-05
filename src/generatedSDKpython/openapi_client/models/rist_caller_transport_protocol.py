@@ -19,7 +19,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional, Union
-from openapi_client.models.encryption import Encryption
+from openapi_client.models.device_encryption import DeviceEncryption
 from openapi_client.models.rist_stream_identifier import RistStreamIdentifier
 from typing import Optional, Set
 from typing_extensions import Self
@@ -32,7 +32,7 @@ class RistCallerTransportProtocol(BaseModel):
     ip: StrictStr
     port: Union[StrictFloat, StrictInt]
     minimum_latency_milliseconds: Union[StrictFloat, StrictInt] = Field(alias="minimumLatencyMilliseconds")
-    encryption: Optional[Encryption] = None
+    encryption: Optional[DeviceEncryption] = None
     __properties: ClassVar[List[str]] = ["streamId", "ip", "port", "minimumLatencyMilliseconds", "encryption"]
 
     model_config = ConfigDict(
@@ -96,7 +96,7 @@ class RistCallerTransportProtocol(BaseModel):
             "ip": obj.get("ip"),
             "port": obj.get("port"),
             "minimumLatencyMilliseconds": obj.get("minimumLatencyMilliseconds") if obj.get("minimumLatencyMilliseconds") is not None else 3000,
-            "encryption": Encryption.from_dict(obj["encryption"]) if obj.get("encryption") is not None else None
+            "encryption": DeviceEncryption.from_dict(obj["encryption"]) if obj.get("encryption") is not None else None
         })
         return _obj
 

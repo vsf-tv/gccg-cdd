@@ -483,9 +483,8 @@ class ClientApplication(object):
 
         while self.running:
             try:
-                print(f"........................{registration_dict}")
+                print(f"........................")
                 reg: DeviceRegistration = DeviceRegistration.from_dict(registration_dict)
-                print("........................")
                 req: ConnectRequestContent = ConnectRequestContent.from_dict({
                     "registration": reg.to_dict(),
                     "hostId": host_id

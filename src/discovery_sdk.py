@@ -672,6 +672,8 @@ class CddSdk(object):
         # Subscribe to all required topics
         try:
             host = self.certs.get_connected_host_settings()
+            # Callbacks do not raise exceptions since they would be disabled by the mqtt client and the SDK
+            # would be unable to recover.
             subscribe_to_topic(host.sub_update_topic, self._update_configuration_callback)
             subscribe_to_topic(host.sub_update_certs_topic, self._update_certs_callback)
             subscribe_to_topic(host.sub_update_thumbnail_subscription_topic, self._update_thumbnail_subscription_callback)
@@ -832,11 +834,12 @@ class CddSdk(object):
             config = json.loads(message.payload.decode("utf-8"))
         except json.JSONDecodeError as e:
             # Here we can't even read the JSON.
-            raise InvalidConfigurationError(details=str(e.msg))
+            logger.exception(f"Could not parse configuration update.  Msg: {e}")
 
         try:
             # Check the smithy-generated configuration model in ../generated-sdk/python/openapi_client/models
             # Pydantic handles camelCase via aliases, store as-is
+            logger.info(f"Got a new configuration update.  Msg: {config}")
             device_configuration: DeviceConfiguration = validate_configuration(config)
             # Increments the update_id and saves the payload.
             # Must use from_dict() - pydantic constructors don't auto-convert nested dicts to models
@@ -845,7 +848,7 @@ class CddSdk(object):
                 "updateId": self.update_id.get()
             })
         except Exception as e:
-            raise InvalidConfigurationError(details=f"Validation Error: {e}")
+            logger.info(f"Could not parse configuration update.  Msg: {e}")
 
     def _update_certs_callback(self, client, userdata, message):
         """
@@ -871,7 +874,7 @@ class CddSdk(object):
             certs_rotate: RotateCertificatesRequestContent = RotateCertificatesRequestContent.from_dict(payload)
             logger.info(f"Got updated credentials rotate message.")
         except Exception as e:
-            raise CertificatesRotationError(details="Msg: {e}.")
+            logger.info(f"Could not parse credential update.  Msg: {e}")
 
         try:
             # Replace the device cert and disconnect/reconnect ONLY if changed.
@@ -888,7 +891,7 @@ class CddSdk(object):
                 logger.info(f"Device cert not changed.  No action taken.")
 
         except Exception as e:
-            raise CertificatesRotationError(details=f"Msg: {e}.")
+            logger.info(f"Could not process credential update.  Msg: {e}")
 
     def _update_thumbnail_subscription_callback(self, client, userdata, message):
         """
@@ -914,7 +917,7 @@ class CddSdk(object):
             logger.info(f"Got a new thumbnail subscription request")
             self.thumbnail_manager.update_thumbnail(thumbnail_subscription)
         except json.JSONDecodeError as e:
-            raise InvalidThumbnailSubscription(details=f"Thumbnail subscription: Could not parse.  Msg: {e}") from e
+            logger.info(f"Could not process thumbnail subscription update.  Msg: {e}")
 
     def _report_registration(self):
         """
@@ -982,11 +985,15 @@ class CddSdk(object):
             deprovision_message: DeprovisionDeviceRequestContent = DeprovisionDeviceRequestContent.from_dict(message_json)
             logger.info(f"Service deprovisioned client at: {deprovision_message.time}. Reason: {deprovision_message.reason}")
             # Acknowledge the deprovisioning, then reset the connection to force a re-pairing.
-            self._handle_deprovision(host_id=self.host_id)
 
         except Exception as e:
-            raise DeprovisionError(details=f"Error processing deprovision: {message}.  Msg: {e}") from e
+            logger.info(f"Could not parse deprovision update.  Deprovisioning anyway.  Msg: {e}")
 
+        try:
+            # Go ahead and complete the deprovision regardless of parsing the deprovision payload.
+            self._handle_deprovision(host_id=self.host_id)
+        except Exception as e:
+            logger.info(f"Could not process deprovision update.  Msg: {e}")
 
     def _update_log_subscription_callback(self, client, userdata, message):
         """
@@ -1011,7 +1018,7 @@ class CddSdk(object):
             logger.info(f"Got new log request.")
             self.logger.dump()  # Immediately send the latest, we either just connected or a new request came.
         except json.JSONDecodeError as e:
-            raise InvalidLogsSubscription(details=f"Log subscription: Could not parse.  Msg: {e}") from e
+            logger.info(f"Could not process logger update.  Msg: {e}")
 
     def _report_logs(self, log_file_path: str):
         if self._processing_log_put:

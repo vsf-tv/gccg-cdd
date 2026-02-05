@@ -26,12 +26,12 @@ from openapi_client.models.connect_response_content import ConnectResponseConten
 from openapi_client.models.connection import Connection
 from openapi_client.models.deprovision_response_content import DeprovisionResponseContent
 from openapi_client.models.device_configuration import DeviceConfiguration
+from openapi_client.models.device_encryption import DeviceEncryption
+from openapi_client.models.device_encryption_aes128 import DeviceEncryptionAes128
+from openapi_client.models.device_encryption_aes256 import DeviceEncryptionAes256
 from openapi_client.models.device_registration import DeviceRegistration
 from openapi_client.models.device_status import DeviceStatus
 from openapi_client.models.disconnect_response_content import DisconnectResponseContent
-from openapi_client.models.encryption import Encryption
-from openapi_client.models.encryption_aes128 import EncryptionAes128
-from openapi_client.models.encryption_aes256 import EncryptionAes256
 from openapi_client.models.enum_values import EnumValues
 from openapi_client.models.error_details import ErrorDetails
 from openapi_client.models.get_configuration_response_content import GetConfigurationResponseContent

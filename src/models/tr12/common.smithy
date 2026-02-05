@@ -2,8 +2,6 @@ $version: "2"
 
 namespace com.example.cdd.common
 
-use aws.protocols#restJson1
-
 structure ProtocolVersion {
     @default("1.0.0")
     version: String
@@ -34,10 +32,13 @@ enum SupportedProtocol {
 }
 
 structure IdAndValue {
-    key: String,
+    @required
+    key: String
+    @required
     value: String
 }
 
+//TODO: make this a map
 list IdAndValueList {
     member: IdAndValue
 }
@@ -48,40 +49,42 @@ list StringList {
 
 structure HostSettings {
     @required
-    iotProtocolName: String,
+    // TODO: should this be an enum?
+    // TODO: Do we want to expose iot or keep that as an implementation detail?
+    iotProtocolName: String
     @required
-    pairingTimeoutSeconds: Integer,
+    pairingTimeoutSeconds: Integer
     @required
-    minIntervalPubSeconds: Integer,
+    minIntervalPubSeconds: Integer
     @required
-    mqttKeepaliveSeconds: Integer,
+    mqttKeepaliveSeconds: Integer
     @required
-    subUpdateTopic: String,
+    subUpdateTopic: String
     @required
-    subUpdateThumbnailSubscriptionTopic: String,
+    subUpdateThumbnailSubscriptionTopic: String
     @required
-    pubReportSchemaTopic: String,
+    pubReportSchemaTopic: String
     @required
-    pubReportRegistrationTopic: String,
+    pubReportRegistrationTopic: String
     @required
-    pubReportStatusTopic: String,
+    pubReportStatusTopic: String
     @required
-    pubReportActualConfigurationTopic: String,
+    pubReportActualConfigurationTopic: String
     @required
-    subUpdateCertsTopic: String,
+    subUpdateCertsTopic: String
     @required
-    pubDeprovisionTopic: String,
+    pubDeprovisionTopic: String
     @required
-    subDeprovisionTopic: String,
+    subDeprovisionTopic: String
     @required
     subUpdateLogSubscriptionTopic: String
 }
 
 structure PairRequest {
     @required
-    deviceType: String,
+    deviceType: String
     @required
-    hostId: String,
+    hostId: String
     @required
     csr: String
     @required
@@ -95,24 +98,24 @@ enum PairFailureReason {
 }
 
 union PairResult {
-    success: PairSuccessData,
+    success: PairSuccessData
     failure: PairFailureData
 }
 
 structure PairSuccessData {
     @required
-    deviceId: String,
+    deviceId: String
     @required
-    pairingCode: String,
+    pairingCode: String
     @required
-    accessCode: String,
+    accessCode: String
     @required
     pairingTimeoutSeconds: Integer
 }
 
 structure PairFailureData {
     @required
-    reason: PairFailureReason,
+    reason: PairFailureReason
 }
 
 structure PairResponse {
@@ -122,37 +125,37 @@ structure PairResponse {
 
 structure AuthRequest {
     @required
-    deviceId: String,
+    deviceId: String
     @required
-    pairingCode: String,
+    pairingCode: String
     @required
     accessCode: String
 }
 
 structure AuthResponse {
     @required
-    status: AuthStatus,
-    caCert: String,
-    deviceCert: String,
-    mqttUri: String,
-    region: String,
+    status: AuthStatus
+    caCert: String
+    deviceCert: String
+    mqttUri: String
+    region: String
     hostSettings: HostSettings
 }
 
 structure ConnectionSettings {
     @required
-    deviceId: String,
+    deviceId: String
     @required
-    uri: String,
+    uri: String
     @required
     region: String
 }
 
 structure CertRotate {
     @required
-    mqttUri: String,
+    mqttUri: String
     @required
-    deviceCert: String,
+    deviceCert: String
     @required
     region: String
 }
@@ -164,15 +167,16 @@ enum DeprovisionReason {
 }
 
 structure DeprovisionMessage {
-    reason: DeprovisionReason,
+    reason: DeprovisionReason
+    //TODO: use timestamp instead?
     time: Integer
 }
 
 structure ThumbnailRequest {
-    period: Integer,
-    expires: Integer,
-    maxSizeKilobyte: Integer,
-    localPath: String,
+    period: Integer
+    expires: Integer
+    maxSizeKilobyte: Integer
+    localPath: String
     remotePath: String
 }
 
@@ -182,12 +186,13 @@ structure ThumbnailSubscription {
 }
 
 map ThumbnailRequestMap {
-    key: String,
+    key: String
     value: ThumbnailRequest
 }
 
 structure LogRequest {
-    expires: Integer,
+    // TODO: use timestamp?
+    expires: Integer
     remotePath: String
 }
 
@@ -198,17 +203,17 @@ structure ReportMessage {
 
 structure HostConfig {
     @required
-    serviceId: String,
+    serviceId: String
     @required
-    serviceName: String,
+    serviceName: String
     @required
-    deviceTypes: StringList,
+    deviceTypes: StringList
     @required
-    thumbnailMaxSizeKB: Integer,
+    thumbnailMaxSizeKB: Integer
     @required
-    logFileMaxSizeKB: Integer,
+    logFileMaxSizeKB: Integer
     @required
-    pairingUrl: String,
+    pairingUrl: String
     @required
     authUrl: String
 }
