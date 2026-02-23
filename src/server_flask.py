@@ -157,9 +157,12 @@ class APIServer:
 
         @self.app.route("/deprovision", methods=["PUT"])
         def deprovision():
-            host_id: str = request.args.get('host_id')
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Request body is required"}), 400
+            host_id = data.get('hostId') or data.get('host_id')
             if not host_id:
-                return jsonify({"error": "host_id is required"}), 400
+                return jsonify({"error": "hostId is required"}), 400
             force: bool = request.args.get('force', '').lower() in ('true', '1')
             return jsonify(
                 self.sdk_manager.get_client().deprovision(
