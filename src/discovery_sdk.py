@@ -828,7 +828,7 @@ class CddSdk(object):
 
         Side Effect:
             Persist configuration for subsequent Response to client get_configuration() requests.
-            Persists any error validating the Configuration, and if found are included in the above Response.
+            Persists any error v alidating the Configuration, and if found are included in the above Response.
         """
         try:
             config = json.loads(message.payload.decode("utf-8"))
@@ -911,9 +911,7 @@ class CddSdk(object):
         try:
             tn_json = json.loads(message.payload.decode("utf-8"))
             # Pydantic model handles camelCase via aliases
-            thumbnail_subscription = RequestThumbnailRequestContent.from_dict({
-                "requests": tn_json
-            })
+            thumbnail_subscription = RequestThumbnailRequestContent.from_dict(tn_json)
             logger.info(f"Got a new thumbnail subscription request")
             self.thumbnail_manager.update_thumbnail(thumbnail_subscription)
         except json.JSONDecodeError as e:

@@ -38,8 +38,6 @@ structure Setting {
     name: String
     @required
     info: String
-
-    //TODO: make this a sum type
     enums: EnumValues
     ranges: RangeValues
 }
