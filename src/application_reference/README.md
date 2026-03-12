@@ -14,5 +14,3 @@ How it runs:
 - get_configuration():
     If properly configured, this application will start an FFMPEG web-cam stream
     via SRT the endpoint specified in the configuration payload.
-
-(See src/device_config/template_schema.json, instance_schema.json)

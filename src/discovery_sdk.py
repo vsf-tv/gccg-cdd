@@ -272,7 +272,7 @@ class CddSdk(object):
                             self._load_certs()
                     ):  # Any hard failure will raise an exception.
                         # Reset the throttle to service-settings expectations.
-                        self._initialize_throttles(self.certs.host_settings.min_interval_pub_seconds)
+                        self._initialize_throttles(int(self.certs.host_settings.min_interval_pub_seconds))
                         return self._start_connect()
 
                     # Should never happen. Auth was successful: _load_certs() should pass or raise an exception
@@ -296,7 +296,7 @@ class CddSdk(object):
                 if self._load_certs():
                     # Reset the throttle to service-settings expectations.
                     self.throttle = Throttle(
-                        pub_min_interval=self.certs.host_settings.min_interval_pub_seconds
+                        pub_min_interval=int(self.certs.host_settings.min_interval_pub_seconds)
                     )
                     return self._start_connect()
 
@@ -809,7 +809,7 @@ class CddSdk(object):
         result = self.mqtt_client.connect(
                 host=self.certs.get_uri(),
                 port=443,
-                keepalive=self.certs.host_settings.mqtt_keepalive_seconds,
+                    keepalive=int(self.certs.host_settings.mqtt_keepalive_seconds),
         )
         logger.info(f"!!!!!!!!!!!!!!!!!!!!!  connect result: {result}")
 

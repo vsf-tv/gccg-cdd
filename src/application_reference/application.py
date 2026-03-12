@@ -17,13 +17,11 @@ import threading
 import time
 import shutil
 import signal
-import subprocess
 import os
 import json
 from requests.exceptions import Timeout
 from typing import Optional
 
-from openapi_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
 from openapi_client import Configuration, ApiClient
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.models.connect_request_content import ConnectRequestContent
@@ -32,10 +30,11 @@ from openapi_client.models.device_registration import DeviceRegistration
 from openapi_client.models.report_status_request_content import ReportStatusRequestContent
 from openapi_client.models.report_status_response_content import ReportStatusResponseContent
 from openapi_client.models.device_status import DeviceStatus
-from openapi_client.models.channel_state import ChannelState
 from openapi_client.models.report_actual_configuration_request_content import ReportActualConfigurationRequestContent
 from openapi_client.models.device_configuration import DeviceConfiguration
 from openapi_client.models.get_configuration_response_content import GetConfigurationResponseContent
+
+from application_reference.tr12_shim import Tr12Shim
 
 INITIAL_CONFIG_ID = ""  # identical to the SDK initial configuration update_id when no config has been obtained.
 
@@ -43,7 +42,7 @@ INITIAL_CONFIG_ID = ""  # identical to the SDK initial configuration update_id w
 #   Only a few params are updated.
 #   Make status update based on values from the underlying encoder/decoder/.
 
-# Client API endpoints.
+# TR-12 Client API endpoints.
 PORT: int = 8603
 
 # Configure API client SDK auto generated from the smithy cdd_sdk definitions.
@@ -54,181 +53,9 @@ api_instance = DefaultApi(api_client)
 # From project source root.
 current_dir = Path(os.path.abspath(__file__)).parent
 payloads_dir = Path(current_dir).parent / "payloads"
-STATUS_JSON_FILE = current_dir / "status.json"
+
+# Your device should have its own Registration file
 REGISTRATION_JSON_FILE = payloads_dir / "1_channel_encoder" / "registration.json"
-
-def get_simulated_bitrate() -> str:
-    """
-    Returns a fake bitrate int between 20000 and 30000
-    """
-    return str(int((time.time() * 1000) % 10000) + 20000)
-
-
-class Encoder(object):
-    """
-    A basic FFMPEG encoder that will start/stop using the available webcam.
-
-    Starts/Stops based on the srt_settings supplied by a schema compliant configuration.
-
-    Note: Only handles SRT params (currently).
-    """
-
-    def __init__(self):
-        self.process = None
-        self.protocol = None
-        self.srt_settings = None
-        self.status_payload: dict = {}
-
-    def running(self):
-        # Carefully Start/Stop the ffmpeg encoder by monitoring the process. Don't want to start multiple.
-        if self.process is None:
-            return False
-        return self.process.poll() is None
-
-    def _update_encoder_config(self, updated_config: dict):
-        self.config_payload = updated_config
-
-    def get_encoder_status(self) -> dict:
-        """
-        (Currently) This application reference design reads and makes minor changes to status that is read from a file.
-        In practice, a real application should generate a complete status based on the current state.
-
-        Returns:
-            A DeviceStatus TR12 model json dictionary
-        """
-        try:
-            with (open(STATUS_JSON_FILE, "r") as f):
-                self.status_payload = json.load(f)
-
-                # Ensure channels exists
-                if not self.status_payload.get("channels"):
-                    self.status_payload["channels"] = []
-                
-                if not self.running():
-                    self.status_payload["channels"][0]["state"] = "IDLE"
-                    self.status_payload["channels"][0]["status"] = [
-                        {'name': 'bitrate', 'value': '0', 'info': 'Bitrate Mbps configured on the video encoder.'},
-                        {'name': 'cpu', 'value': '21', 'info': 'Current CPU % utilization.'},
-                        {'name': 'temp', 'value': '72', 'info': 'CPU in degrees C.'}
-                    ]
-                else:
-                    self.status_payload["channels"][0]["state"] = "ACTIVE"
-                    self.status_payload["channels"][0]["status"] = [
-                        {'name': 'bitrate', 'value': get_simulated_bitrate(), 'info': 'Bitrate Mbps configured on the video encoder.'},
-                        {'name': 'cpu', 'value': '61', 'info': 'Current CPU % utilization.'},
-                        {'name': 'temp', 'value': '84', 'info': 'CPU in degrees C.'}
-                    ]
-
-        except Exception as e:
-            print(f"Error Updating status: {e}")
-
-        return self.status_payload
-
-    def start(self, str_settings: SrtCallerTransportProtocol):
-
-        # A client application should restart if params change while running.
-        if not self.running():
-            print(f"************* Starting *****************")
-            ip = str_settings.ip
-            port = str_settings.port
-            stream_id = str_settings.stream_id
-            cmd = f"ffmpeg -f avfoundation -framerate 30 -video_size 640x480 -i 0 -vcodec libx264 -f mpegts srt://{ip}:{port}/{stream_id}"
-            print(f"command: {cmd}")
-            self.process = subprocess.Popen(
-                cmd, shell=True, preexec_fn=os.setsid
-            )  # Detach from parent.
-        else:
-            print("Already running")
-
-    def stop(self):
-
-        print("************* Stopping *****************")
-
-        if (
-            self.process is not None and self.process.poll() is None
-        ):  # Check if process is still running.
-            try:
-                # First try SIGINT (Ctrl+C)
-                self.process.send_signal(signal.SIGINT)
-                print(f"Sent SIGINT signal to process {self.process.pid}")
-
-                # Wait for a short time to see if the process exits.
-                try:
-                    self.process.wait(timeout=5)  # Wait up to 5 seconds.
-                except subprocess.TimeoutExpired:
-                    # If SIGINT didn't work, try SIGTERM.
-                    print(f"Process didn't respond to SIGINT, trying SIGTERM...")
-                    self.process.send_signal(signal.SIGTERM)
-
-                    try:
-                        self.process.wait(timeout=5)  # Wait again for SIGTERM.
-                    except subprocess.TimeoutExpired:
-                        print(f"Process didn't respond to SIGTERM either")
-                        # Optionally, you could use SIGKILL as a last resort.
-                        # self.process.kill()  # This is equivalent to SIGKILL.
-
-                self.process = None
-
-            except ProcessLookupError:
-                print(f"Process {self.process.pid} may have already terminated.")
-
-        else:
-            print("Already stopped")
-
-    def handle_update(self, device_configuration: DeviceConfiguration) -> bool:
-        """
-        Handles an update message from the underlying application.
-
-        Args:
-            configuration: DeviceConfiguration open-api generated model
-
-        Note: This function comprehends the instance schema that it provided to the SDK on SDK Start.
-               The SDK validated the service-provided configuration message conforms to the schema.
-               As a result, we can confidently parse the configuration JSON here.
-        """
-        if not device_configuration:
-            print("No configuration to process")
-            return False
-
-        print(f"Got an update: {device_configuration.to_str()}")
-
-        try:
-            state = device_configuration.channels[0].state
-            # The model is kind of funny in how it names the polymorphic types for the various transport protocols.
-            # A multi-channel device should really reconcile the channel config by channel ID field.
-            instance =  device_configuration.channels[0].connection.transport_protocol.actual_instance
-            if not instance:
-                print(f"Missing transport protocol")
-                return False
-
-            if state == ChannelState.IDLE:
-                print(f"Calling stop")
-                self.stop()
-                return True
-            if state == ChannelState.ACTIVE:
-                if hasattr(instance, 'srt_caller'):
-                    print(f"Calling Start")
-                    if self.running() and instance.srt_caller == self.srt_settings:
-                        print("Already running with same settings (ip at least)")
-                        return True
-
-                    # Stop then re-Start if the settings changed.
-                    if (
-                        self.running()
-                        and self.srt_settings
-                        and self.srt_settings != instance.srt_caller
-                    ):
-                        self.stop()
-
-                    self.srt_settings = instance.srt_caller
-                    self.start(instance.srt_caller)
-
-
-        except Exception as e:
-            print(f"Unable to process command: {e}")
-
-        return True
-
 
 class ThumbnailSimulator(threading.Thread):
     """
@@ -298,7 +125,8 @@ class ClientApplication(object):
     """
 
     def __init__(self):
-        self.encoder = Encoder()
+        self.shim = Tr12Shim()
+        self.encoder = self.shim.callbacks.encoder
         self.running = True
         self.latest_configuration_id = INITIAL_CONFIG_ID
         self.current_configuration: Optional[DeviceConfiguration] = None
@@ -336,7 +164,7 @@ class ClientApplication(object):
         Makes a report_status request passing ReportStatusRequestContent()
         TR12 API
         """
-        status_payload = self.encoder.get_encoder_status()
+        status_payload = self.shim.get_device_status()
         device_status: DeviceStatus =  DeviceStatus.from_dict(status_payload)
         req = ReportStatusRequestContent.from_dict({
             "status": device_status.to_dict()
@@ -410,7 +238,10 @@ class ClientApplication(object):
             if update_id != self.latest_configuration_id:
                 print(f"New update. update_id: {update_id}")
                 self.latest_configuration_id = update_id
-                success: bool = self.encoder.handle_update(device_configuration)
+
+                # Test shim apply_desired_configuration
+                print(f"[SHIM TEST] apply_desired_configuration.")
+                success = self.shim.apply_desired_configuration(device_configuration)
 
                 # This reference design application simply reflects the host-service-provided 'desired'
                 # configuration back to the host service as the 'actual' configuration. In real application,
@@ -420,6 +251,11 @@ class ClientApplication(object):
                 # See: Host Service API: configuration: desired/actual.
                 if success:
                     self.current_configuration = device_configuration
+                    # Test shim get_actual_configuration
+                    with open(REGISTRATION_JSON_FILE, "r") as f:
+                        reg = DeviceRegistration.from_dict(json.load(f))
+                    actual_config = self.shim.get_actual_configuration(reg)
+                    print(f"[SHIM TEST] get_actual_configuration: {actual_config.to_json()}")
 
         return update_id
 
@@ -480,33 +316,33 @@ class ClientApplication(object):
         """
         self.thumbnail_emitter_sdi.start()
         self.thumbnail_emitter_hdmi.start()
-
+        registration_payload: DeviceRegistration = DeviceRegistration.from_dict(registration_dict)
         while self.running:
             try:
                 print(f"........................")
-                reg: DeviceRegistration = DeviceRegistration.from_dict(registration_dict)
+
+                # First, try to connect using certs the SDK should locate based on the host_id.
                 req: ConnectRequestContent = ConnectRequestContent.from_dict({
-                    "registration": reg.to_dict(),
+                    "registration": registration_payload.to_dict(),
                     "hostId": host_id
                 })
                 resp: ConnectResponseContent = api_instance.connect(connect_request_content=req.to_dict())
                 print(
-                    f"run_loop Success: {resp.success} State: {resp.state} "
+                    f"Success: {resp.success} State: {resp.state} "
                     f" error: {resp.error} DeviceID: {resp.device_id} "
                     f" message: {resp.message}."
                 )
 
-                #
-                # PAIRING: If the SDK returns PAIRING then present the pairing_code to the user so the device
-                #          can be claimed in the service.
-                #
+                # PAIRING: response.state == 'PAIRING' then:
+                # Present the pairing_code to the device user to they can communicate it to the host service
+                # to be claimed.
                 if resp.success and resp.state == "PAIRING":
                     print(
                         f"Device is not paired. Pairing Code: {resp.pairing_code} Expires in: {resp.expires}s."
                     )
 
                 #
-                # CONNECTED: send any status update, check for an updated configuration.
+                # While CONNECTED: Send a status update, check for an updated configuration.
                 #
                 if resp.success and resp.state == "CONNECTED":
                     # The service will respond for any state but best to only call these when the SDK is CONNECTED
