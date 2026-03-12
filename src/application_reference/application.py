@@ -164,8 +164,7 @@ class ClientApplication(object):
         Makes a report_status request passing ReportStatusRequestContent()
         TR12 API
         """
-        status_payload = self.shim.get_device_status()
-        device_status: DeviceStatus =  DeviceStatus.from_dict(status_payload)
+        device_status: DeviceStatus =  self.shim.get_device_status()
         req = ReportStatusRequestContent.from_dict({
             "status": device_status.to_dict()
         })

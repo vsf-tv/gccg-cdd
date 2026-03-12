@@ -44,6 +44,7 @@ from openapi_client.models.profile import Profile
 from openapi_client.models.setting_profile import SettingProfile
 from openapi_client.models.settings_choice import SettingsChoice
 from openapi_client.models.simple_settings import SimpleSettings
+from openapi_client.models.device_status import DeviceStatus
 
 from application_reference.tr12_callbacks import Callbacks
 
@@ -214,10 +215,10 @@ class Tr12Shim:
             connection=connection,
         )
 
-    def get_device_status(self) -> Optional[dict]:
+    def get_device_status(self) -> DeviceStatus:
         """Build device status dict using callbacks.
         
-        Returns a dict matching DeviceStatus structure:
+        Returns a DeviceStatus structure:
           - status: List[{name, value, info}]  # device-level status
           - channels: List[{id, state, status: List[{name, value, info}]}]
         """
@@ -231,7 +232,7 @@ class Tr12Shim:
             channel_state = self.callbacks.get_channel_state(channel_id)
             channel_status = self.callbacks.get_channel_status(channel_id)
 
-            return {
+            status_payload = {
                 "status": device_status,
                 "channels": [
                     {
@@ -241,6 +242,8 @@ class Tr12Shim:
                     }
                 ]
             }
+            return DeviceStatus.from_dict(status_payload)
+
         except Exception as e:
             logger.error(f"Error getting device status: {e}")
             return None
