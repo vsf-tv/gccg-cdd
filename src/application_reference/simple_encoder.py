@@ -18,6 +18,7 @@ import subprocess
 import time
 from typing import Optional
 
+# Update FFMPEG_PATH or remove and set your local $PATH.
 FFMPEG_PATH = "/opt/homebrew/bin/ffmpeg"
 
 from openapi_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
