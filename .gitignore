@@ -1,0 +1,27 @@
+# Virtual environment
+venv/
+
+# IDE
+.idea/
+
+# Build artifacts
+build/smithy/
+
+# Old/backup files
+backup_old_stuff/
+
+# Environment files
+.env
+
+# Scripts
+generate-sdks.sh
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+
+# OS files
+.DS_Store
