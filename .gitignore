@@ -7,6 +7,9 @@ venv/
 # Build artifacts
 build/smithy/
 
+# Old generated SDK (moved to src/models)
+generated-sdk/
+
 # Old/backup files
 backup_old_stuff/
 
