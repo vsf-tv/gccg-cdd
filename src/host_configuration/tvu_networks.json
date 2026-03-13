@@ -1,9 +1,0 @@
-{
-    "serviceId": "tvu_tr12_host",
-    "serviceName": "TVU TR-12 Host Service",
-    "deviceTypes": ["SOURCE", "DESTINATION", "BOTH"],
-    "pairingUrl": "https://mlab.tvunetworks.com",
-    "authUrl": "https://mlab.tvunetworks.com",
-    "thumbnailMaxSizeKB": 100,
-    "logFileMaxSizeKB": 500
-}

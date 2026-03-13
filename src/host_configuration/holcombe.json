@@ -1,9 +1,0 @@
-{
-    "service_id": "aws_mediaconnect",
-    "service_name": "Test Host for developer Mike Holcombs flow cell",
-    "device_types": ["SOURCE", "DESTINATION", "BOTH"],
-    "pairing_url": "https://jc1yvs91q9.execute-api.us-west-2.amazonaws.com/dev",
-    "auth_url": "https://5se0ocpesf.execute-api.us-west-2.amazonaws.com/dev",
-    "thumbnail_max_size_KB": 250,
-    "log_file_max_size_KB": 500
-}

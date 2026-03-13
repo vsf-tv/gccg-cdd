@@ -1,9 +1,0 @@
-{
-    "serviceId": "aws_mediaconnect",
-    "serviceName": "Test Host for private account brundle",
-    "deviceTypes": ["SOURCE", "DESTINATION", "BOTH"],
-    "pairingUrl": "https://qafce7ecrd.execute-api.us-west-2.amazonaws.com/dev",
-    "authUrl": "https://n5b01bdixh.execute-api.us-west-2.amazonaws.com/dev",
-    "thumbnailMaxSizeKB": 250,
-    "logFileMaxSizeKB": 500
-}
