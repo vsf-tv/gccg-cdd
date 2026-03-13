@@ -1,0 +1,3 @@
+[submodule "src/models/TR-12-Models"]
+	path = src/models/TR-12-Models
+	url = git@github.com:vsf-tv/TR-12-Models.git

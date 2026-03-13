@@ -56,7 +56,7 @@ No other firewall, port forwarding is required. Possibly a containerized version
 - Application reference design
 - Instructions for installation, and running the Application Reference Design and CDD SDK. 
 
-## Python External Dependencies
+## External Dependencies
 The CDD SDK here implemented in python. The following python external packages are required.
 - flask
 - jsonschema
@@ -68,6 +68,13 @@ The CDD SDK here implemented in python. The following python external packages a
 - pytest 
 - referencing
 - urllib3
+
+## TR-12 Dependency
+- https://github.com/vsf-tv/TR-12-Models/tree/main
+- To clone this repo ensure you do so RECURSIVELY 
+  - git clone --recurse-submodules git@github.com:vsf-tv/gccg-cdd.git
+- To update your existing repo to use the submodule:
+  - git pull --recurse-submodules
 
 ## Build Dependency
 - build dependency: smithy/open-api
