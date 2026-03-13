@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "sources": ["."],
+  "maven": {
+    "dependencies": [
+      "software.amazon.smithy.python.codegen.plugins:types:0.1.0",
+      "software.amazon.smithy:smithy-aws-traits:1.65.0",
+      "software.amazon.smithy:smithy-openapi:1.65.0"
+    ]
+  },
+  "plugins": {
+    "openapi": {
+      "service": "com.example.cdd.internal#HostServiceApi",
+      "protocol": "aws.protocols#restJson1",
+      "version": "3.0.2",
+      "tags": true,
+      "forbidGreedyLabels": true
+    }
+  }
+}

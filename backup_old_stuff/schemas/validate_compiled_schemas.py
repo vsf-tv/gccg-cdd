@@ -1,0 +1,58 @@
+import json
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from jsonschema import Draft201909Validator, FormatChecker
+
+def main(tests):
+    current_directory =  os.path.dirname(__file__)
+    
+    def load_json_file(filename):
+        filepath = os.path.join(current_directory, filename)
+        with open(filepath, 'r') as f:
+            return json.load(f)
+
+    for test_name, test_config in tests.items():
+        print(f"\n=== Running {test_name} ===")
+        
+        try:
+            main_schema = load_json_file(test_config["main_schema"])
+            example_data = load_json_file(test_config["example_data"])
+            
+            validator = Draft201909Validator(main_schema, format_checker=FormatChecker())
+            errors = list(validator.iter_errors(example_data))
+            
+            if errors:
+                print(f"❌ {test_name} validation failed with {len(errors)} error(s):")
+                for i, error in enumerate(errors, 1):
+                    path = '.'.join(str(p) for p in error.absolute_path) if error.absolute_path else 'root'
+                    print(f"  {i}. {error.message} (at: {path})")
+            else:
+                print(f"✅ {test_name} validation successful")
+                
+        except Exception as e:
+            print(f"❌ {test_name} validation error: {e}")
+
+    return 0
+
+tests = {
+    "test1": {
+        "main_schema": "../compiled_schemas/registration-schema.json",
+        "schema_directory": ".",
+        "example_data": "../payloads/1_channel_encoder/registration.json"
+    },
+    "test2": {
+        "main_schema": "../compiled_schemas/configuration-schema.json",
+        "schema_directory": ".",
+        "example_data": "../payloads/1_channel_encoder/configuration.json"
+    },
+    "test3": {
+        "main_schema": "../compiled_schemas/status-schema.json",
+        "schema_directory": ".",
+        "example_data": "../payloads/1_channel_encoder/status.json"
+    },
+
+}
+
+if __name__ == "__main__":
+    exit(main(tests))

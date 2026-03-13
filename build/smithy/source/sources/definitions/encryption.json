@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/schemas/definitions/encryption.json",
+  "title": "Shared Network and Encryption Definitions",
+
+  "$defs": {
+
+    "aes128_passcode": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{32}$",
+      "errorMessage": {
+        "pattern": "AES-128 passcode must be exactly 32 hexadecimal characters (0-9, a-f, A-F)"
+      }
+    },
+
+    "aes256_passcode": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "errorMessage": {
+        "pattern": "AES-256 passcode must be exactly 64 hexadecimal characters (0-9, a-f, A-F)"
+      }
+    },
+
+    "encryption": {
+      "type": "object",
+      "description": "Defines the encryption type and key.",
+      "maxProperties": 1,
+      "properties": {
+        "aes128_passcode": {
+          "$ref": "#/$defs/aes128_passcode"
+        },
+        "aes256_passcode": {
+          "$ref": "#/$defs/aes256_passcode"
+        },
+        "none": {
+          "type": "null",
+          "description": "Indicates no encryption is used."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

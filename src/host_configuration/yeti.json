@@ -1,0 +1,9 @@
+{
+    "serviceId": "aws_mediaconnect",
+    "serviceName": "Test Host for developer allogator",
+    "deviceTypes": ["SOURCE", "DESTINATION", "BOTH"],
+    "pairingUrl": "https://ow4mn8cvn8.execute-api.us-west-2.amazonaws.com/dev",
+    "authUrl": "https://wgi19kqmk8.execute-api.us-west-2.amazonaws.com/dev",
+    "thumbnailMaxSizeKB": 250,
+    "logFileMaxSizeKB": 500
+}

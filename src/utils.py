@@ -29,7 +29,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from custom_exceptions import SystemIntegrationError, UploadError
 from custom_logger import logger
-from internal_api_client.models.get_host_config_response_content import GetHostConfigResponseContent
+from tr12_api_client.models.get_host_config_response_content import GetHostConfigResponseContent
 
 # Simple UUID for the subscribed configuration update ID.
 UPDATE_ID_SIZE = 5

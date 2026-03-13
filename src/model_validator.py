@@ -1,8 +1,8 @@
 
 # Generated model imports
-from openapi_client.models.device_registration import DeviceRegistration
-from openapi_client.models.device_status import DeviceStatus
-from openapi_client.models.device_configuration import DeviceConfiguration
+from cdd_sdk_client.models.device_registration import DeviceRegistration
+from cdd_sdk_client.models.device_status import DeviceStatus
+from cdd_sdk_client.models.device_configuration import DeviceConfiguration
 
 """
 Exceptions will be raised if unable to deserialize into the TR12 models.

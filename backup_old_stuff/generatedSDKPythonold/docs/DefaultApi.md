@@ -1,0 +1,448 @@
+# openapi_client.DefaultApi
+
+All URIs are relative to *http://localhost*
+
+Method | HTTP request | Description
+------------- | ------------- | -------------
+[**connect**](DefaultApi.md#connect) | **POST** /connect | 
+[**deprovision**](DefaultApi.md#deprovision) | **POST** /deprovision | 
+[**disconnect**](DefaultApi.md#disconnect) | **POST** /disconnect | 
+[**get_configuration**](DefaultApi.md#get_configuration) | **GET** /configuration | 
+[**get_connection_status**](DefaultApi.md#get_connection_status) | **GET** /connection_status | 
+[**report_actual_configuration**](DefaultApi.md#report_actual_configuration) | **POST** /report_actual_configuration | 
+[**report_status**](DefaultApi.md#report_status) | **POST** /report_status | 
+
+
+# **connect**
+> ConnectResponseContent connect(connect_request_content)
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.connect_request_content import ConnectRequestContent
+from openapi_client.models.connect_response_content import ConnectResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+    connect_request_content = openapi_client.ConnectRequestContent() # ConnectRequestContent | 
+
+    try:
+        api_response = api_instance.connect(connect_request_content)
+        print("The response of DefaultApi->connect:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->connect: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **connect_request_content** | [**ConnectRequestContent**](ConnectRequestContent.md)|  | 
+
+### Return type
+
+[**ConnectResponseContent**](ConnectResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Connect 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deprovision**
+> DeprovisionResponseContent deprovision(deprovision_request_content)
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.deprovision_request_content import DeprovisionRequestContent
+from openapi_client.models.deprovision_response_content import DeprovisionResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+    deprovision_request_content = openapi_client.DeprovisionRequestContent() # DeprovisionRequestContent | 
+
+    try:
+        api_response = api_instance.deprovision(deprovision_request_content)
+        print("The response of DefaultApi->deprovision:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->deprovision: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **deprovision_request_content** | [**DeprovisionRequestContent**](DeprovisionRequestContent.md)|  | 
+
+### Return type
+
+[**DeprovisionResponseContent**](DeprovisionResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Deprovision 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **disconnect**
+> DisconnectResponseContent disconnect()
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.disconnect_response_content import DisconnectResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+
+    try:
+        api_response = api_instance.disconnect()
+        print("The response of DefaultApi->disconnect:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->disconnect: %s\n" % e)
+```
+
+
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**DisconnectResponseContent**](DisconnectResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Disconnect 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **get_configuration**
+> GetConfigurationResponseContent get_configuration()
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.get_configuration_response_content import GetConfigurationResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+
+    try:
+        api_response = api_instance.get_configuration()
+        print("The response of DefaultApi->get_configuration:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->get_configuration: %s\n" % e)
+```
+
+
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**GetConfigurationResponseContent**](GetConfigurationResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | GetConfiguration 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **get_connection_status**
+> GetConnectionStatusResponseContent get_connection_status()
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.get_connection_status_response_content import GetConnectionStatusResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+
+    try:
+        api_response = api_instance.get_connection_status()
+        print("The response of DefaultApi->get_connection_status:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->get_connection_status: %s\n" % e)
+```
+
+
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**GetConnectionStatusResponseContent**](GetConnectionStatusResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | GetConnectionStatus 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **report_actual_configuration**
+> ReportActualConfigurationResponseContent report_actual_configuration(report_actual_configuration_request_content)
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.report_actual_configuration_request_content import ReportActualConfigurationRequestContent
+from openapi_client.models.report_actual_configuration_response_content import ReportActualConfigurationResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+    report_actual_configuration_request_content = openapi_client.ReportActualConfigurationRequestContent() # ReportActualConfigurationRequestContent | 
+
+    try:
+        api_response = api_instance.report_actual_configuration(report_actual_configuration_request_content)
+        print("The response of DefaultApi->report_actual_configuration:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->report_actual_configuration: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **report_actual_configuration_request_content** | [**ReportActualConfigurationRequestContent**](ReportActualConfigurationRequestContent.md)|  | 
+
+### Return type
+
+[**ReportActualConfigurationResponseContent**](ReportActualConfigurationResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | ReportActualConfiguration 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **report_status**
+> ReportStatusResponseContent report_status(report_status_request_content)
+
+### Example
+
+
+```python
+import openapi_client
+from openapi_client.models.report_status_request_content import ReportStatusRequestContent
+from openapi_client.models.report_status_response_content import ReportStatusResponseContent
+from openapi_client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = openapi_client.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with openapi_client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = openapi_client.DefaultApi(api_client)
+    report_status_request_content = openapi_client.ReportStatusRequestContent() # ReportStatusRequestContent | 
+
+    try:
+        api_response = api_instance.report_status(report_status_request_content)
+        print("The response of DefaultApi->report_status:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling DefaultApi->report_status: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **report_status_request_content** | [**ReportStatusRequestContent**](ReportStatusRequestContent.md)|  | 
+
+### Return type
+
+[**ReportStatusResponseContent**](ReportStatusResponseContent.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | ReportStatus 200 response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+

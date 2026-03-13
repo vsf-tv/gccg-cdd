@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/schemas/definitions/transport_protocols/zixi_listener.json",
+  "title": "Zixi Listener Protocol Configuration",
+  "$defs": {
+    "zixi_listener": {
+      "type": "object",
+      "description": "Configuration for pushing streams using Zixi protocol.",
+      "properties": {
+        "stream_id": {
+          "type": "string",
+          "description": "Unique identifier for the Zixi stream."
+        },
+        "ip": {
+          "description": "The IP address of the Zixi receiver.",
+          "$ref": "../primitives.json#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "description": "The port of the Zixi receiver.",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "description": "Target buffer latency in milliseconds.",
+          "minimum": 200,
+          "maximum": 10000
+        },
+        "encryption": {
+          "description": "Encryption configuration for Zixi stream.",
+          "$ref": "../encryption.json#/$defs/encryption"
+        }
+      },
+      "required": [
+        "ip",
+        "port",
+        "latency_ms",
+        "stream_id",
+        "encryption"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

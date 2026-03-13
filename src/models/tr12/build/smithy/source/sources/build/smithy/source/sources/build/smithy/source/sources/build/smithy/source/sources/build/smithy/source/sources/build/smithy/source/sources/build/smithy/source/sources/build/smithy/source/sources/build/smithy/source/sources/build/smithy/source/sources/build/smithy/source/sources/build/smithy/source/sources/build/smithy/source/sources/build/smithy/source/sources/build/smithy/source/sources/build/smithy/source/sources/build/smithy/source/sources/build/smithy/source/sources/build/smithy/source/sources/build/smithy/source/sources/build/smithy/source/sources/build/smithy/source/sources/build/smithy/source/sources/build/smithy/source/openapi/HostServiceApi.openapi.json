@@ -1,0 +1,542 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "HostServiceApi",
+        "version": "1.0"
+    },
+    "paths": {
+        "/authenticate": {
+            "post": {
+                "operationId": "Authenticate",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AuthenticateRequestContent"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authenticate 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthenticateResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/internal/deprovision": {
+            "post": {
+                "operationId": "DeprovisionDevice",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeprovisionDeviceRequestContent"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "DeprovisionDevice 200 response"
+                    }
+                }
+            }
+        },
+        "/internal/host-config": {
+            "get": {
+                "operationId": "GetHostConfig",
+                "responses": {
+                    "200": {
+                        "description": "GetHostConfig 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetHostConfigResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/internal/log": {
+            "post": {
+                "operationId": "RequestLog",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RequestLogRequestContent"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "RequestLog 200 response"
+                    }
+                }
+            }
+        },
+        "/internal/rotate-certs": {
+            "post": {
+                "operationId": "RotateCertificates",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RotateCertificatesRequestContent"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "RotateCertificates 200 response"
+                    }
+                }
+            }
+        },
+        "/internal/thumbnail": {
+            "post": {
+                "operationId": "RequestThumbnail",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RequestThumbnailRequestContent"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "RequestThumbnail 200 response"
+                    }
+                }
+            }
+        },
+        "/internal/version": {
+            "get": {
+                "operationId": "GetVersion",
+                "responses": {
+                    "200": {
+                        "description": "GetVersion 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetVersionResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/pair": {
+            "post": {
+                "operationId": "Pair",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PairRequestContent"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pair 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PairResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AuthStatus": {
+                "type": "string",
+                "enum": [
+                    "STANDBY",
+                    "CLAIMED"
+                ]
+            },
+            "AuthenticateRequestContent": {
+                "type": "object",
+                "properties": {
+                    "deviceId": {
+                        "type": "string"
+                    },
+                    "pairingCode": {
+                        "type": "string"
+                    },
+                    "accessCode": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accessCode",
+                    "deviceId",
+                    "pairingCode"
+                ]
+            },
+            "AuthenticateResponseContent": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/AuthStatus"
+                    },
+                    "caCert": {
+                        "type": "string"
+                    },
+                    "deviceCert": {
+                        "type": "string"
+                    },
+                    "mqttUri": {
+                        "type": "string"
+                    },
+                    "region": {
+                        "type": "string"
+                    },
+                    "hostSettings": {
+                        "$ref": "#/components/schemas/HostSettings"
+                    }
+                },
+                "required": [
+                    "status"
+                ]
+            },
+            "DeprovisionDeviceRequestContent": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "$ref": "#/components/schemas/DeprovisionReason"
+                    },
+                    "time": {
+                        "type": "number"
+                    }
+                }
+            },
+            "DeprovisionReason": {
+                "type": "string",
+                "enum": [
+                    "DEPROVISIONED",
+                    "EXPIRED",
+                    "UNKNOWN"
+                ]
+            },
+            "GetHostConfigResponseContent": {
+                "type": "object",
+                "properties": {
+                    "serviceId": {
+                        "type": "string"
+                    },
+                    "serviceName": {
+                        "type": "string"
+                    },
+                    "deviceTypes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "thumbnailMaxSizeKB": {
+                        "type": "number"
+                    },
+                    "logFileMaxSizeKB": {
+                        "type": "number"
+                    },
+                    "pairingUrl": {
+                        "type": "string"
+                    },
+                    "authUrl": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "authUrl",
+                    "deviceTypes",
+                    "logFileMaxSizeKB",
+                    "pairingUrl",
+                    "serviceId",
+                    "serviceName",
+                    "thumbnailMaxSizeKB"
+                ]
+            },
+            "GetVersionResponseContent": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "$ref": "#/components/schemas/ProtocolVersion"
+                    }
+                },
+                "required": [
+                    "version"
+                ]
+            },
+            "HostSettings": {
+                "type": "object",
+                "properties": {
+                    "iotProtocolName": {
+                        "type": "string"
+                    },
+                    "pairingTimeoutSeconds": {
+                        "type": "number"
+                    },
+                    "minIntervalPubSeconds": {
+                        "type": "number"
+                    },
+                    "mqttKeepaliveSeconds": {
+                        "type": "number"
+                    },
+                    "subUpdateTopic": {
+                        "type": "string"
+                    },
+                    "subUpdateThumbnailSubscriptionTopic": {
+                        "type": "string"
+                    },
+                    "pubReportSchemaTopic": {
+                        "type": "string"
+                    },
+                    "pubReportRegistrationTopic": {
+                        "type": "string"
+                    },
+                    "pubReportStatusTopic": {
+                        "type": "string"
+                    },
+                    "pubReportActualConfigurationTopic": {
+                        "type": "string"
+                    },
+                    "subUpdateCertsTopic": {
+                        "type": "string"
+                    },
+                    "pubDeprovisionTopic": {
+                        "type": "string"
+                    },
+                    "subDeprovisionTopic": {
+                        "type": "string"
+                    },
+                    "subUpdateLogSubscriptionTopic": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "iotProtocolName",
+                    "minIntervalPubSeconds",
+                    "mqttKeepaliveSeconds",
+                    "pairingTimeoutSeconds",
+                    "pubDeprovisionTopic",
+                    "pubReportActualConfigurationTopic",
+                    "pubReportRegistrationTopic",
+                    "pubReportSchemaTopic",
+                    "pubReportStatusTopic",
+                    "subDeprovisionTopic",
+                    "subUpdateCertsTopic",
+                    "subUpdateLogSubscriptionTopic",
+                    "subUpdateThumbnailSubscriptionTopic",
+                    "subUpdateTopic"
+                ]
+            },
+            "PairFailureData": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "$ref": "#/components/schemas/PairFailureReason"
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
+            "PairFailureReason": {
+                "type": "string",
+                "enum": [
+                    "HOST_ID_MISMATCH",
+                    "VERSION_NOT_SUPPORTED",
+                    "DEVICE_TYPE_NOT_SUPPORTED"
+                ]
+            },
+            "PairRequestContent": {
+                "type": "object",
+                "properties": {
+                    "deviceType": {
+                        "type": "string"
+                    },
+                    "hostId": {
+                        "type": "string"
+                    },
+                    "csr": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "csr",
+                    "deviceType",
+                    "hostId",
+                    "version"
+                ]
+            },
+            "PairResponseContent": {
+                "type": "object",
+                "properties": {
+                    "result": {
+                        "$ref": "#/components/schemas/PairResult"
+                    }
+                },
+                "required": [
+                    "result"
+                ]
+            },
+            "PairResult": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "title": "success",
+                        "properties": {
+                            "success": {
+                                "$ref": "#/components/schemas/PairSuccessData"
+                            }
+                        },
+                        "required": [
+                            "success"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "title": "failure",
+                        "properties": {
+                            "failure": {
+                                "$ref": "#/components/schemas/PairFailureData"
+                            }
+                        },
+                        "required": [
+                            "failure"
+                        ]
+                    }
+                ]
+            },
+            "PairSuccessData": {
+                "type": "object",
+                "properties": {
+                    "deviceId": {
+                        "type": "string"
+                    },
+                    "pairingCode": {
+                        "type": "string"
+                    },
+                    "accessCode": {
+                        "type": "string"
+                    },
+                    "pairingTimeoutSeconds": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "accessCode",
+                    "deviceId",
+                    "pairingCode",
+                    "pairingTimeoutSeconds"
+                ]
+            },
+            "ProtocolVersion": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "type": "string",
+                        "default": "1.0.0"
+                    }
+                }
+            },
+            "RequestLogRequestContent": {
+                "type": "object",
+                "properties": {
+                    "expires": {
+                        "type": "number"
+                    },
+                    "remotePath": {
+                        "type": "string"
+                    }
+                }
+            },
+            "RequestThumbnailRequestContent": {
+                "type": "object",
+                "properties": {
+                    "requests": {
+                        "$ref": "#/components/schemas/ThumbnailRequestMap"
+                    }
+                },
+                "required": [
+                    "requests"
+                ]
+            },
+            "RotateCertificatesRequestContent": {
+                "type": "object",
+                "properties": {
+                    "mqttUri": {
+                        "type": "string"
+                    },
+                    "deviceCert": {
+                        "type": "string"
+                    },
+                    "region": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "deviceCert",
+                    "mqttUri",
+                    "region"
+                ]
+            },
+            "ThumbnailRequest": {
+                "type": "object",
+                "properties": {
+                    "period": {
+                        "type": "number"
+                    },
+                    "expires": {
+                        "type": "number"
+                    },
+                    "maxSizeKilobyte": {
+                        "type": "number"
+                    },
+                    "localPath": {
+                        "type": "string"
+                    },
+                    "remotePath": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ThumbnailRequestMap": {
+                "type": "object",
+                "additionalProperties": {
+                    "$ref": "#/components/schemas/ThumbnailRequest"
+                }
+            }
+        }
+    }
+}

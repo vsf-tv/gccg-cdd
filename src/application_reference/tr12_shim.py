@@ -34,17 +34,17 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from openapi_client.models.channel import Channel
-from openapi_client.models.channel_configuration import ChannelConfiguration
-from openapi_client.models.channel_state import ChannelState
-from openapi_client.models.device_configuration import DeviceConfiguration
-from openapi_client.models.device_registration import DeviceRegistration
-from openapi_client.models.id_and_value import IdAndValue
-from openapi_client.models.profile import Profile
-from openapi_client.models.setting_profile import SettingProfile
-from openapi_client.models.settings_choice import SettingsChoice
-from openapi_client.models.simple_settings import SimpleSettings
-from openapi_client.models.device_status import DeviceStatus
+from cdd_sdk_client.models.channel import Channel
+from cdd_sdk_client.models.channel_configuration import ChannelConfiguration
+from cdd_sdk_client.models.channel_state import ChannelState
+from cdd_sdk_client.models.device_configuration import DeviceConfiguration
+from cdd_sdk_client.models.device_registration import DeviceRegistration
+from cdd_sdk_client.models.id_and_value import IdAndValue
+from cdd_sdk_client.models.profile import Profile
+from cdd_sdk_client.models.setting_profile import SettingProfile
+from cdd_sdk_client.models.settings_choice import SettingsChoice
+from cdd_sdk_client.models.simple_settings import SimpleSettings
+from cdd_sdk_client.models.device_status import DeviceStatus
 
 from application_reference.tr12_callbacks import Callbacks
 

@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/schemas/definitions/transport_protocols/arq_metrics.json",
+  "title": "Metrics common to all arq protocols",
+  "$defs": {
+    "arq_metrics": {
+      "type": "object",
+      "properties": {
+        "total_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dropped_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "recovered_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unrecovered_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "resent_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fec_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fec_recovered_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "bitrate_bps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rtt": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rtt_variance": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

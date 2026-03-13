@@ -21,9 +21,10 @@ from typing import Optional
 # Update FFMPEG_PATH or remove and set your local $PATH.
 FFMPEG_PATH = "/opt/homebrew/bin/ffmpeg"
 
-from openapi_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
-from openapi_client.models.channel_state import ChannelState
-from openapi_client.models.connection import Connection
+from cdd_sdk_client.models.srt_caller import SrtCaller
+from cdd_sdk_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
+from cdd_sdk_client.models.channel_state import ChannelState
+from cdd_sdk_client.models.connection import Connection
 
 def get_simulated_bitrate() -> str:
     """
@@ -65,7 +66,7 @@ class Encoder(object):
             ip = str_settings.ip
             port = str_settings.port
             stream_id = str_settings.stream_id
-            cmd = (f"{FFMPEG_PATH} -f avfoundation -framerate 30 -video_size 640x480 "
+            cmd = (f"ffmpeg -f avfoundation -framerate 30 -video_size 640x480 "
                    f"-i 0 -vcodec libx264 -f mpegts srt://{ip}:{port}/{stream_id}")
             print(f"command: {cmd}")
             self.process = subprocess.Popen(
@@ -118,7 +119,7 @@ class Encoder(object):
             :param connection: the Connection object containing the transport protocol details
         """
         self.srt_config_settings = connection.transport_protocol.actual_instance
-        if not isinstance(self.srt_config_settings, SrtCallerTransportProtocol):
+        if not isinstance(self.srt_config_settings, SrtCaller):
             print(f"Unsupported transport protocol: {type(self.srt_config_settings)}")
             return
         if self.srt_config_settings:

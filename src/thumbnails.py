@@ -5,8 +5,8 @@ import time
 from pathlib import Path
 
 # Generated model imports
-from internal_api_client.models.request_thumbnail_request_content import RequestThumbnailRequestContent
-from internal_api_client.models.thumbnail_request import ThumbnailRequest
+from tr12_api_client.models.request_thumbnail_request_content import RequestThumbnailRequestContent
+from tr12_api_client.models.thumbnail_request import ThumbnailRequest
 
 # Third-party imports
 

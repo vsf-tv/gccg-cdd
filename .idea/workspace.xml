@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="2ea81073-77ae-4e97-afcc-cb907e681257" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/src/application_reference/simple_encoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/application_reference/simple_encoder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generatedSDKpython/.openapi-generator/FILES" beforeDir="false" afterPath="$PROJECT_DIR$/src/generatedSDKpython/.openapi-generator/FILES" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generatedSDKpython/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/src/generatedSDKpython/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generatedSDKpython/docs/ChannelConfiguration.md" beforeDir="false" afterPath="$PROJECT_DIR$/src/generatedSDKpython/docs/ChannelConfiguration.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generatedSDKpython/openapi_client/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/generatedSDKpython/openapi_client/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generatedSDKpython/openapi_client/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/generatedSDKpython/openapi_client/models/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generatedSDKpython/openapi_client/models/channel_configuration.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/generatedSDKpython/openapi_client/models/channel_configuration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/models/tr12/common.smithy" beforeDir="false" afterPath="$PROJECT_DIR$/src/models/tr12/common.smithy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/models/tr12/configuration.smithy" beforeDir="false" afterPath="$PROJECT_DIR$/src/models/tr12/configuration.smithy" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GoLibraries">
+    <option name="indexEntireGoPath" value="true" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file:///Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/logging/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/../discovery/discovery/venv/lib/python3.9/site-packages/paho/mqtt/client.py" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectCodeStyleSettingsMigration">
+    <option name="version" value="2" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="2wSdLjoQ1Uv30o49mZkbVmDNW5O" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python tests.Python tests for pair_test.TestPairing.test_get_new_pairing_code_success.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.Python tests in pair_test.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ARD: Flow Test Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ARD: TVU Networks.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ARD: VSF Test Host .executor&quot;: &quot;Run&quot;,
+    &quot;Python.ARD: brundle.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ARD: dev brundle .executor&quot;: &quot;Run&quot;,
+    &quot;Python.ARD: yeti.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Allogator_Test_Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Brundle Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Brundle_Test_Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Flow_Test_Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Holcombe_Test_Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.SDK 1 Channel Encoder.executor&quot;: &quot;Run&quot;,
+    &quot;Python.SDK 2 Channel Encoder.executor&quot;: &quot;Run&quot;,
+    &quot;Python.SDK Decoder.executor&quot;: &quot;Run&quot;,
+    &quot;Python.SDK New.executor&quot;: &quot;Run&quot;,
+    &quot;Python.SDK PTZ.executor&quot;: &quot;Run&quot;,
+    &quot;Python.SDK.executor&quot;: &quot;Run&quot;,
+    &quot;Python.VSF Test Host .executor&quot;: &quot;Run&quot;,
+    &quot;Python.Yeti_Test_Host.executor&quot;: &quot;Run&quot;,
+    &quot;Python.__init__.executor&quot;: &quot;Run&quot;,
+    &quot;Python.compile_schemas.executor&quot;: &quot;Run&quot;,
+    &quot;Python.logger.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_api_call.executor&quot;: &quot;Run&quot;,
+    &quot;Python.thumbnails.executor&quot;: &quot;Run&quot;,
+    &quot;Python.validate_compiled_schemas.executor&quot;: &quot;Run&quot;,
+    &quot;Python.validate_instance_schema.executor&quot;: &quot;Run&quot;,
+    &quot;Python.validate_schemas.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;SHELLCHECK.PATH&quot;: &quot;I do mind&quot;,
+    &quot;Shell Script.test_api_call.sh.executor&quot;: &quot;Run&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;smithy&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/brundle/gccg-cdd/src/host_configuration&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.23253968&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;aws.codewhisperer&quot;,
+    &quot;settings.editor.splitter.proportion&quot;: &quot;0.3506406&quot;,
+    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/host_configuration" />
+      <recent name="$PROJECT_DIR$/src/payloads/1_channel_encoder" />
+      <recent name="$PROJECT_DIR$/src/schemas/examples/1_channel_encoder" />
+      <recent name="$PROJECT_DIR$/src/application_reference" />
+      <recent name="$PROJECT_DIR$/src/schemas" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/models/tr12" />
+      <recent name="$PROJECT_DIR$/src/models/cdd_sdk" />
+      <recent name="$PROJECT_DIR$/src/models/common" />
+      <recent name="$PROJECT_DIR$/src/models" />
+      <recent name="$PROJECT_DIR$/backup_old_stuff" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.ARD: dev brundle ">
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="gccg-cdd" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <kind value="FILE" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="gccg-cdd" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <kind value="DIRECTORY" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: Brundle Host" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id brundle" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: Flow Test Host" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id flow" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: Holcombe_Test_Host" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id holcombe" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: TVU Networks" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id tvu_networks" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: VSF Test Host " type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id vsf_test_host" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: brundle" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id brundle" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: dev brundle " type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id dev_brundle" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ARD: yeti" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id yeti" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SDK 1 Channel Encoder" type="PythonConfigurationType" factoryName="Python" folderName="New Folder">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.12 (gccg-cdd)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/server_flask.py" />
+      <option name="PARAMETERS" value="--certs_path  $PROJECT_DIR$/../DiscoverySDKCertsDir --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type SOURCE --internal_device_id device1231aew1a_tvu3 --log_path /tmp/" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SDK 2 Channel Encoder" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/server_flask.py" />
+      <option name="PARAMETERS" value="--certs_path  $PROJECT_DIR$/../DiscoverySDKCertsDir  --schema_path $PROJECT_DIR$/src/compiled_schemas --registration_file_path  $PROJECT_DIR$/src/payloads/2_channel_encoder/registration.json --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type SOURCE --internal_device_id device123221sa1xxdx12ch_2 --log_path /tmp/" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SDK Decoder" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/server_flask.py" />
+      <option name="PARAMETERS" value="--certs_path  $PROJECT_DIR$/../DiscoverySDKCertsDir  --schema_path $PROJECT_DIR$/src/compiled_schemas --registration_file_path  $PROJECT_DIR$/src/payloads/1_channel_encoder/registration_decoder.json --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type SOURCE --internal_device_id device123221sa1xxdx12ch_dec --log_path /tmp/" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SDK" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/server_flask.py" />
+      <option name="PARAMETERS" value="--certs_path  $PROJECT_DIR$/../DiscoverySDKCertsDir  --schema_path  $PROJECT_DIR$/src/device_config/instance_schema.json --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type ENCODER --internal_device_id device123221sa1xxdx --log_path /tmp/" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Yeti_Test_Host" type="PythonConfigurationType" factoryName="Python">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9 (discovery)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/application_reference/application.py" />
+      <option name="PARAMETERS" value="--host_id yeti" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/__init__.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="compile_schemas" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/schemas" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/schemas/compile_schemas.py" />
+      <option name="PARAMETERS" value="--source $PROJECT_DIR$/src/schemas/ --destination $PROJECT_DIR$/src/compiled_schemas/" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="validate_compiled_schemas" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/schemas" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/schemas/validate_compiled_schemas.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="validate_schemas" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/schemas" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/schemas/validate_schemas.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Python tests for pair_test.TestPairing.test_get_new_pairing_code_success" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="gccg-cdd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;pair_test.TestPairing.test_get_new_pairing_code_success&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Doctests">
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.SDK 1 Channel Encoder" />
+      <item itemvalue="Python.ARD: Brundle Host" />
+      <item itemvalue="Python.SDK" />
+      <item itemvalue="Python.SDK 2 Channel Encoder" />
+      <item itemvalue="Python.SDK Decoder" />
+      <item itemvalue="Python.ARD: VSF Test Host " />
+      <item itemvalue="Python.ARD: Flow Test Host" />
+      <item itemvalue="Python.ARD: dev brundle " />
+      <item itemvalue="Python.ARD: TVU Networks" />
+      <item itemvalue="Python.ARD: brundle" />
+      <item itemvalue="Python.ARD: yeti" />
+      <item itemvalue="Python.ARD: Holcombe_Test_Host" />
+      <item itemvalue="Python.Yeti_Test_Host" />
+      <item itemvalue="Python.validate_compiled_schemas" />
+      <item itemvalue="Python.compile_schemas" />
+      <item itemvalue="Python.__init__" />
+      <item itemvalue="Python.validate_schemas" />
+      <item itemvalue="Python tests.Python tests for pair_test.TestPairing.test_get_new_pairing_code_success" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.validate_schemas" />
+        <item itemvalue="Python.validate_compiled_schemas" />
+        <item itemvalue="Python.compile_schemas" />
+        <item itemvalue="Python.__init__" />
+        <item itemvalue="Python tests.Python tests for pair_test.TestPairing.test_get_new_pairing_code_success" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.27812.49" />
+        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-IU-251.27812.49" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="2ea81073-77ae-4e97-afcc-cb907e681257" name="Changes" comment="" />
+      <created>1746038854802</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1746038854802</updated>
+      <workItem from="1746038855907" duration="27000" />
+      <workItem from="1746038889536" duration="1432000" />
+      <workItem from="1746040330537" duration="152000" />
+      <workItem from="1746040502647" duration="31153000" />
+      <workItem from="1746645046448" duration="64646000" />
+      <workItem from="1747682805836" duration="40355000" />
+      <workItem from="1747926918743" duration="24228000" />
+      <workItem from="1748495917220" duration="46526000" />
+      <workItem from="1748983074137" duration="63337000" />
+      <workItem from="1749578525837" duration="127122000" />
+      <workItem from="1754331735108" duration="598000" />
+      <workItem from="1754332870545" duration="586000" />
+      <workItem from="1754335574413" duration="53000" />
+      <workItem from="1754335662019" duration="686000" />
+      <workItem from="1754505108032" duration="21263000" />
+      <workItem from="1755730415082" duration="5747000" />
+      <workItem from="1755898920303" duration="597000" />
+      <workItem from="1757348905662" duration="5922000" />
+      <workItem from="1758043680858" duration="599000" />
+      <workItem from="1758646037140" duration="598000" />
+      <workItem from="1758731271890" duration="29096000" />
+      <workItem from="1759467454158" duration="15529000" />
+      <workItem from="1759859261948" duration="6849000" />
+      <workItem from="1760390332737" duration="500000" />
+      <workItem from="1762453340113" duration="26571000" />
+      <workItem from="1763415696140" duration="43475000" />
+      <workItem from="1764003216560" duration="10805000" />
+      <workItem from="1764017137564" duration="18049000" />
+      <workItem from="1764606774799" duration="46664000" />
+      <workItem from="1765303914179" duration="27201000" />
+      <workItem from="1765767169300" duration="9435000" />
+      <workItem from="1765904873316" duration="1895000" />
+      <workItem from="1765914203148" duration="1515000" />
+      <workItem from="1765930330163" duration="975000" />
+      <workItem from="1765931364275" duration="40000" />
+      <workItem from="1765931418985" duration="5485000" />
+      <workItem from="1766015799964" duration="4616000" />
+      <workItem from="1766188662317" duration="571000" />
+      <workItem from="1766770222458" duration="511000" />
+      <workItem from="1766776355576" duration="3508000" />
+      <workItem from="1766787699759" duration="2500000" />
+      <workItem from="1767053458063" duration="53000" />
+      <workItem from="1767053524554" duration="281000" />
+      <workItem from="1767053898749" duration="2311000" />
+      <workItem from="1768326309274" duration="75705000" />
+      <workItem from="1768946649814" duration="92357000" />
+      <workItem from="1769784666302" duration="6929000" />
+      <workItem from="1770055325771" duration="21327000" />
+      <workItem from="1770652082941" duration="26177000" />
+      <workItem from="1771001755567" duration="587000" />
+      <workItem from="1771005274616" duration="20305000" />
+      <workItem from="1771625252971" duration="1388000" />
+      <workItem from="1771628633053" duration="3544000" />
+      <workItem from="1772472422129" duration="50575000" />
+      <workItem from="1773257348779" duration="24200000" />
+      <workItem from="1773356273869" duration="432000" />
+      <workItem from="1773356719867" duration="3388000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VgoProject">
+    <integration-enabled>false</integration-enabled>
+    <settings-migrated>true</settings-migrated>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test/pair_test.py</url>
+          <line>37</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/test/test_smithy_models.py</url>
+          <line>35</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/thumbnails.py</url>
+          <line>149</line>
+          <option name="timeStamp" value="29" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/thumbnails.py</url>
+          <line>129</line>
+          <option name="timeStamp" value="48" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/discovery_sdk.py</url>
+          <line>914</line>
+          <option name="timeStamp" value="49" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/gccg_cdd$ARD__Flow_Test_Host.coverage" NAME="ARD: Flow Test Host Coverage Results" MODIFIED="1767043328536" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$validate_schemas.coverage" NAME="validate_schemas Coverage Results" MODIFIED="1764874268183" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/schemas" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$ARD__brundle.coverage" NAME="ARD: brundle Coverage Results" MODIFIED="1770159815332" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$SDK_1_Channel_Encoder.coverage" NAME="SDK 1 Channel Encoder Coverage Results" MODIFIED="1773356932026" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$ARD__yeti.coverage" NAME="ARD: yeti Coverage Results" MODIFIED="1770841972832" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$Flow_Test_Host.coverage" NAME="Flow_Test_Host Coverage Results" MODIFIED="1764620936424" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$validate_instance_schema.coverage" NAME="validate_instance_schema Coverage Results" MODIFIED="1748529672237" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/device_config" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$.coverage" NAME=" Coverage Results" MODIFIED="1759468572995" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$VSF_Test_Host_.coverage" NAME="VSF Test Host  Coverage Results" MODIFIED="1759765566053" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$SDK_PTZ.coverage" NAME="SDK 2 Channel Encoder Coverage Results" MODIFIED="1764875473634" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$Brundle_Host.coverage" NAME="Brundle Host Coverage Results" MODIFIED="1752005807174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$Yeti_Test_Host.coverage" NAME="Yeti_Test_Host Coverage Results" MODIFIED="1764786272567" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$thumbnails.coverage" NAME="thumbnails Coverage Results" MODIFIED="1746658462325" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$test_api_call.coverage" NAME="test_api_call Coverage Results" MODIFIED="1758907267950" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/application_reference" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$ARD__VSF_Test_Host_.coverage" NAME="ARD: VSF Test Host  Coverage Results" MODIFIED="1770148114362" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$__init__.coverage" NAME="__init__ Coverage Results" MODIFIED="1763515219790" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$SDK_New.coverage" NAME="SDK 1 Channel Encoder Coverage Results" MODIFIED="1765766620598" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$Allogator_Test_Host.coverage" NAME="Allogator_Test_Host Coverage Results" MODIFIED="1764106598292" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$Holcombe_Test_Host.coverage" NAME="Holcombe_Test_Host Coverage Results" MODIFIED="1764888615695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$ARD__TVU_Networks.coverage" NAME="ARD: TVU Networks Coverage Results" MODIFIED="1773259765868" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$SDK.coverage" NAME="SDK Coverage Results" MODIFIED="1763171613559" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$ARD__dev_brundle_.coverage" NAME="ARD: dev brundle  Coverage Results" MODIFIED="1773357400551" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$logger.coverage" NAME="logger Coverage Results" MODIFIED="1749508159429" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$Brundle_Test_Host.coverage" NAME="Brundle_Test_Host Coverage Results" MODIFIED="1764176279981" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$SDK_Decoder.coverage" NAME="SDK Decoder Coverage Results" MODIFIED="1764883079441" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$validate_compiled_schemas.coverage" NAME="validate_compiled_schemas Coverage Results" MODIFIED="1764870534333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/schemas" />
+    <SUITE FILE_PATH="coverage/gccg_cdd$compile_schemas.coverage" NAME="compile_schemas Coverage Results" MODIFIED="1764870524309" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/schemas" />
+  </component>
+</project>
