@@ -35,6 +35,7 @@ from cdd_sdk_client.models.device_configuration import DeviceConfiguration
 from cdd_sdk_client.models.get_configuration_response_content import GetConfigurationResponseContent
 
 from application_reference.tr12_shim import Tr12Shim
+from application_reference.tr12_callbacks import Callbacks
 
 INITIAL_CONFIG_ID = ""  # identical to the SDK initial configuration update_id when no config has been obtained.
 
@@ -125,7 +126,7 @@ class ClientApplication(object):
     """
 
     def __init__(self):
-        self.shim = Tr12Shim()
+        self.shim = Tr12Shim(Callbacks())
         self.encoder = self.shim.callbacks.encoder
         self.running = True
         self.latest_configuration_id = INITIAL_CONFIG_ID

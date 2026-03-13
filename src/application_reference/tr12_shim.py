@@ -71,9 +71,8 @@ class Tr12Shim:
         get_channel_state(channel_id) -> ChannelState
     """
 
-    def __init__(self):
-        self.callbacks = Callbacks()
-
+    def __init__(self, callbacks: Callbacks):
+        self.callbacks = callbacks
     # ------------------------------------------------------------------
     # Apply desired configuration
     # ------------------------------------------------------------------

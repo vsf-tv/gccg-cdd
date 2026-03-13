@@ -136,12 +136,48 @@ class Callbacks:
         """Return device-level status (cpu, temp)."""
         if self.encoder.running():
             return [
-                {'name': 'cpu', 'value': '61', 'info': 'Current CPU % utilization.'},
-                {'name': 'temp', 'value': '84', 'info': 'CPU in degrees C.'}
+                {
+                    'name': 'cpu',
+                    'value': '61',
+                    'info': 'Current CPU % utilization.'
+                 },
+                {
+                    'name': 'temp',
+                    'value': '84',
+                    'info': 'CPU in degrees C.'
+                },
+                {
+                    "name": "model",
+                    "value": "Talon",
+                    "info": "Hardware device model identifier."
+                },
+                {
+                    "name": "serial",
+                    "value": "123456789",
+                    "info": "Device serial number."
+                }
             ]
         return [
-            {'name': 'cpu', 'value': '21', 'info': 'Current CPU % utilization.'},
-            {'name': 'temp', 'value': '72', 'info': 'CPU in degrees C.'}
+            {
+                'name': 'cpu',
+                'value': '31',
+                'info': 'Current CPU % utilization.'
+            },
+            {
+                'name': 'temp',
+                'value': '76',
+                'info': 'CPU in degrees C.'
+            },
+            {
+                "name": "model",
+                "value": "Talon",
+                "info": "Hardware device model identifier."
+            },
+            {
+                "name": "serial",
+                "value": "123456789",
+                "info": "Device serial number."
+            }
         ]
 
     def get_channel_status(self, channel_id: str) -> list[dict]:
