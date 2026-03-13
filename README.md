@@ -11,12 +11,13 @@ Update Existing
 ```bash
 cli$: git submodule update --init --recursive
 ```
+
 ## TR-12 Working Group
 >Draft design documents related to this project are currently being discussed and revised in the VSF Bi-Weekly Forum.  
 For access, please reach out to Brad Gilmer <brad@gilmer.tv> or Brian Rundle <brundle@amazon.com>.
 
 ## Introduction
-CDD solves for discovering, managing and monitoring video devices from a scalable cloud service.
+TR-12 solves for discovering, managing and monitoring video devices from a scalable cloud service.
 The hardest part of cloud workflows is often getting live signals connected to the cloud
 in the first place. 
 
@@ -24,42 +25,40 @@ While there are many transport protocols available for securely streaming
 video (SRT, RIST, TR-07, etc), video production and distribution workflows that involve distributed
 sources and destinations still need to be manually managed and monitored. Today, accessing devices
 in distributed facilities requires cumbersome and not-scalable approaches like VPN tunneling, 
-looking up devices by IP address, accees via usernames/passwords on a locally hosted console UIs.
+looking up devices by IP address, access via usernames/passwords on a locally hosted console UIs.
 
-CDD provides a mechanism to securely pair/discover devices into a (cloud) registry. Once connected,
-a CDD enabled device can be managed and monitored anywhere in the world across the open internet. The
-CDD protocol uses modern, cloud-first solutions for security, modeling, validation, and resource
-lifecycle and applies those concepts for video streaming devices. A device can install the SDK, and
+TR-12 provides a mechanism to securely pair/discover devices into a (cloud) registry.  Once connected,
+a TR-12 enabled device can be managed and monitored anywhere in the world across the open internet. The
+TR-12 protocol uses modern, cloud-first solutions for security, modeling, validation, and resource
+lifecycle and applies those concepts for video streaming devices. A device can install this SDK, and
 using the provided models, quickly integrate with the device's native control plane. A device user
 can enable/disable the SDK, pair with a (cloud) host service of their choice and immediately have
-persistent, portable access via that service. A CDD host service will support all CDD devices. 
-The protocol solves for the widely differentiated settings (think codec, channels, etc) available from
-different device types (encoders, decoders, cameras, playout devices) from different manufactures.
+persistent, portable access via that service. A TR-12 host service will support all TR-12 devices that
+register on a compatible, backward compatible TR-12 version. The protocol solves for the widely 
+differentiated settings (think codec, channels, etc) available from different device types (encoders, 
+decoders, cameras, playout devices) from different manufactures.
 Devices can expose completely customized settings within the protocol's structure.   
 
-CDD is a protocol that defines APIs (request/response) between clients (devices) and
-host service. The SDK provided in this repository implements a CDD client. This repository 
+TR-12 is a protocol that defines APIs (request/response) between clients (devices) and
+host service. The SDK provided in this repository implements a TR-12 "CDD" client.  This repository 
 also includes and Application Reference Design (ARD) to simulate a 1-channel encoder devices that integrates
-the CDD SDK Client. Also provided is a cloud host service for testing. Using this readme, you should be able 
-to install and test the ARD/SDK against with the VSF cloud endpoint in under 30 minutes. 
-The VSF host service (deployed in AWS) has APIs for pair/describe/deprovision/configure/get thumbnails. 
+the CDD SDK Client. Also referenced, is a VSF-provided TR-12 cloud host service for testing. 
+Using this readme, you should be able to install and test the ARD/SDK against with the VSF cloud 
+endpoint in around 30 minutes. The VSF host service has APIs for 
+pair/describe/deprovision/configure/get thumbnails.
 
-Finally, this repository does not provide code for a CDD host service. In practice, modern cloud infrastructure
-is highly differentiated between vendors and platforms. The ultimate goal for CDD is a concise TR12 specification
-that results in an ecosystem of CDD production cloud services.    
-
-## TR12 Protocol
-
-1) Smithy Models (src/models) http/mqtt request/response models. 
-2) The TR12 Protocol document available: http:<vsf> defines additional client/service requirements.
+## TR12 Protocol:
+1) Smithy Models (src/models) http/mqtt request/response models: https://github.com/vsf-tv/TR-12-Models
+2) The TR12 Draft Protocol: https://github.com/vsf-tv/TR-12-Models/blob/main/VSF_TR-12-ClientDeviceDiscoveryDraft.pdf
 
 ## Architecture
-The SDK client provided in this repo is a python process hosting a Rest API on localhost. The device application uses the 
+This TR-12 SDK client is a python process hosting a Rest API on localhost.  The device application uses the 
 generated models (provided for most languages) for creating API requests, handling API responses to the SDK
 process.  The SDK handles connecting and communicating the host service via http and mqtt. 
-equires https/Port 443 outbound access.
-No other firewall, port forwarding is required. Possibly a containerized version will be available soon. 
 
+## Network Requirements
+Requires https/Port 443 outbound access 
+No other firewall, port forwarding is required. Possibly a containerized version will be available soon. 
 
 ## Contents
 - CDD Client SDK 
@@ -121,7 +120,7 @@ installed and test it directly using the following CLI command that connects a s
 
 ## API Caller Application
 To test the SDK againt the VSF Test Host Service, we will need to make authenticated API calls on the VSF Host
-Service Endpoint. In production, a CDD host service will provide its own API access mechanism, GUI, etc.
+Service Endpoint. In production, a TR-12 host service will provide its own API access mechanism, GUI, etc.
 
 Download or use your favorite API Caller application such as Postman, Hoppscotch, Insomnia, etc.
 The application you chose must be able to make API calls formatted with headers using AWS Credentials.
@@ -139,7 +138,7 @@ This endpoint is not a production service and may be removed/replaced at any tim
 
 ** The VSF Test Endpoint is simply a testing tool privately vended by the VSF and is NOT an AWS service. **
 It should never be used for production and is available for VSF members to quickly download and verify the
-functionality of their CDD SDK client.
+functionality of their TR-12 SDK client.
 
 ## Create AWS Credentials to access the endpoint. 
 
@@ -253,7 +252,7 @@ Requried:
 Step 1:
 ```bash
 Clone and cd into the CDD package
-> git clone https://github.com/vsf-tv/gccg-cdd
+> git clone --recurse-submodules git@github.com:vsf-tv/gccg-cdd.git
 > cd gccg-cdd ( the CDK Root dir )
 > ls
 You should see a src/ dir and requirements.txt   
@@ -391,7 +390,6 @@ Get Status (DescribeDevice)
 
 This will request the latest status message posted by the ARD/SDK to the VSF Host Service.  
 Request Path: <base_endpoint>/device/{device-id}
-Request Path: <base_endpoint>/device/{device-id}?include_schema=true|false
 Request Type: GET 
 e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01
 
@@ -463,9 +461,6 @@ Expected Host Service Response:
     "error": ""
 }
 
-Any error in matching the configuration to the instance schema will result in an error.  The API should return details
-of the validation problem. 
-
 Expected SDK and ARD behavior:
 <The ARD should start streaming to your SRT listener endpoint>
 ```
@@ -491,9 +486,6 @@ Expected Host Service Response:
     "message": "Device updated",
     "error": ""
 }
-
-Any error in matching the configuration to the instance schema will result in an error.  The API should return details
-of the validation problem. 
 
 Expected SDK and ARD behavior
 <The ARD should stop streaming.>
@@ -542,8 +534,8 @@ Expected Host Service Response:
 ```bash
 Application Reference Design (ARD) emits a series of thumbnails to /tmp/image_sdi.jpg and /tmp/image_hdmi.jpg.
 These represent images from both the SDI-1 and HDMI-1 sources. Availability and location are defined in the
-schema and status message (see instance_schema.json and example_status.json). The SDK delivers images to the
-Host Service in response to a "subscription" request. The application need only emit images to the local_path.
+Registation.json payload.  The SDK delivers images to the Host Service in response to a "subscription" request. 
+The application need only emit images to the local_path.
 The SDK handles the rest including managing the rate, expiration, and transmission.
 
 This example allows you to make a Get Thumbnail API call to the Host Service Test Endpoint which passes a new
@@ -558,7 +550,7 @@ The following is an example Host Service Test Endpoint API.  You can repeatedly 
 The first response may be empty as the new subscription is being processed.
 
 The <thumbnail_id> is provided in the registration_file returned via the DescribeDevice API
-This file is provided by the application reference design on SDK startup.  See: CDD Message Protocol
+This file is provided by the application reference design on SDK startup.  See: TR-12 Message Protocol
 
 Request Path: <base_endpoint>/device/{device-id}?source=<thumbnail_id>
 Request Type: GET
@@ -605,27 +597,3 @@ Expected Host Service Response:
 # Check the device is no longer a registered device (see DescribeDevice/ListDevices above).
 ```
 
-### Developer Instructions
-
-The CDD Protocol schemas are maintained in a manageable, hierarchal form. These will restricted to update pull-requests
-generally since they codify the CDD message payload.  That said, when updating, make changes to the following
-hierarchal and easy to read/edit schemas in:
-```bash
-<cdd>/src/schemas/  
-```
-After any changes, run
-```bash
-<cdd>/src/schemas/compile_schemas.py
-```
-
-The resulting schemas used by the SDK are collapsed and written here for easy loading by the SDK.
-```bash
-<cdd>/src/compiled_schemas/
-```
-
-The developer can validate changes by runninng
-```bash
-<cdd>/src/schemas/validate_schemas.py
-<cdd>/src/schemas/validate_compiled_schemas.py
-
-```
