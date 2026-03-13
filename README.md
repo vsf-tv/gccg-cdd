@@ -2,7 +2,7 @@
 Discovery, monitoring and connection management of streaming video devices using an internet-secure, cloud 
 and NAT friendly, scalable, pairing and communication protocol.
 
-# Important: This repository has a TR-12 dependency: You must clone recursively.
+## Important: This repository has a TR-12 dependency: You must clone recursively.
 New Clone:
 ```bash
 cli$: git clone --recurse-submodules git@github.com:vsf-tv/gccg-cdd.git
@@ -11,7 +11,7 @@ Update Existing
 ```bash
 cli$: git submodule update --init --recursive
 ```
-
+## TR-12 Working Group
 >Draft design documents related to this project are currently being discussed and revised in the VSF Bi-Weekly Forum.  
 For access, please reach out to Brad Gilmer <brad@gilmer.tv> or Brian Rundle <brundle@amazon.com>.
 
