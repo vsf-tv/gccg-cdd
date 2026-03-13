@@ -9,6 +9,6 @@ pytest==8.3.4
 referencing>=0.35.0
 urllib3>=2.0.0
 pydantic>=2.0
-./src/models/tr12/generated/tr12python
+./src/models/TR-12-Models/generated/tr12python
 ./src/models/cdd_sdk/generated/cdd_sdkpython
 
