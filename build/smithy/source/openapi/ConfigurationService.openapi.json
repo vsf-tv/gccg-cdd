@@ -1,0 +1,374 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "ConfigurationService",
+        "version": "1.0"
+    },
+    "paths": {
+        "/get_configuration": {
+            "get": {
+                "operationId": "GetConfiguration",
+                "responses": {
+                    "200": {
+                        "description": "GetConfiguration 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetConfigurationResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/report_actual_configuration": {
+            "put": {
+                "operationId": "SetConfiguration",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SetConfigurationRequestContent"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "SetConfiguration 200 response"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ChannelConfiguration": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/ChannelState"
+                    },
+                    "settings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IdAndValue"
+                        }
+                    },
+                    "settingProfile": {
+                        "$ref": "#/components/schemas/SettingProfile"
+                    },
+                    "connection": {
+                        "$ref": "#/components/schemas/Connection"
+                    }
+                },
+                "required": [
+                    "id",
+                    "state"
+                ]
+            },
+            "ChannelState": {
+                "type": "string",
+                "enum": [
+                    "ACTIVE",
+                    "IDLE"
+                ]
+            },
+            "Connection": {
+                "type": "object",
+                "properties": {
+                    "transportProtocol": {
+                        "$ref": "#/components/schemas/TransportProtocol"
+                    }
+                }
+            },
+            "GetConfigurationResponseContent": {
+                "type": "object",
+                "properties": {
+                    "configuration": {
+                        "$ref": "#/components/schemas/RouterDeviceConfiguration"
+                    }
+                },
+                "required": [
+                    "configuration"
+                ]
+            },
+            "IdAndValue": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "value"
+                ]
+            },
+            "RistCallerTransportProtocol": {
+                "type": "object",
+                "properties": {
+                    "streamId": {
+                        "type": "string"
+                    },
+                    "mode": {
+                        "type": "string"
+                    },
+                    "ip": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "number"
+                    },
+                    "latencyMs": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "ip",
+                    "latencyMs",
+                    "mode",
+                    "port",
+                    "streamId"
+                ]
+            },
+            "RistListenerTransportProtocol": {
+                "type": "object",
+                "properties": {
+                    "streamId": {
+                        "type": "string"
+                    },
+                    "mode": {
+                        "type": "string"
+                    },
+                    "ip": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "number"
+                    },
+                    "latencyMs": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "ip",
+                    "latencyMs",
+                    "mode",
+                    "port"
+                ]
+            },
+            "RouterDeviceConfiguration": {
+                "type": "object",
+                "properties": {
+                    "channels": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ChannelConfiguration"
+                        }
+                    }
+                },
+                "required": [
+                    "channels"
+                ]
+            },
+            "SetConfigurationRequestContent": {
+                "type": "object",
+                "properties": {
+                    "configuration": {
+                        "$ref": "#/components/schemas/RouterDeviceConfiguration"
+                    }
+                },
+                "required": [
+                    "configuration"
+                ]
+            },
+            "SettingProfile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id"
+                ]
+            },
+            "SrtCallerTransportProtocol": {
+                "type": "object",
+                "properties": {
+                    "streamId": {
+                        "type": "string"
+                    },
+                    "ip": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "number"
+                    },
+                    "latencyMs": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "ip",
+                    "latencyMs",
+                    "port",
+                    "streamId"
+                ]
+            },
+            "SrtListenerTransportProtocol": {
+                "type": "object",
+                "properties": {
+                    "streamId": {
+                        "type": "string"
+                    },
+                    "ip": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "number"
+                    },
+                    "latencyMs": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "ip",
+                    "latencyMs",
+                    "port"
+                ]
+            },
+            "TransportProtocol": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "title": "srtListener",
+                        "properties": {
+                            "srtListener": {
+                                "$ref": "#/components/schemas/SrtListenerTransportProtocol"
+                            }
+                        },
+                        "required": [
+                            "srtListener"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "title": "srtCaller",
+                        "properties": {
+                            "srtCaller": {
+                                "$ref": "#/components/schemas/SrtCallerTransportProtocol"
+                            }
+                        },
+                        "required": [
+                            "srtCaller"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "title": "ristListener",
+                        "properties": {
+                            "ristListener": {
+                                "$ref": "#/components/schemas/RistListenerTransportProtocol"
+                            }
+                        },
+                        "required": [
+                            "ristListener"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "title": "ristCaller",
+                        "properties": {
+                            "ristCaller": {
+                                "$ref": "#/components/schemas/RistCallerTransportProtocol"
+                            }
+                        },
+                        "required": [
+                            "ristCaller"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "title": "zixiListener",
+                        "properties": {
+                            "zixiListener": {
+                                "$ref": "#/components/schemas/ZixiListenerTransportProtocol"
+                            }
+                        },
+                        "required": [
+                            "zixiListener"
+                        ]
+                    },
+                    {
+                        "type": "object",
+                        "title": "zixiCaller",
+                        "properties": {
+                            "zixiCaller": {
+                                "$ref": "#/components/schemas/ZixiCallerTransportProtocol"
+                            }
+                        },
+                        "required": [
+                            "zixiCaller"
+                        ]
+                    }
+                ]
+            },
+            "ZixiCallerTransportProtocol": {
+                "type": "object",
+                "properties": {
+                    "streamId": {
+                        "type": "string"
+                    },
+                    "ip": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "number"
+                    },
+                    "latencyMs": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "ip",
+                    "latencyMs",
+                    "port",
+                    "streamId"
+                ]
+            },
+            "ZixiListenerTransportProtocol": {
+                "type": "object",
+                "properties": {
+                    "streamId": {
+                        "type": "string"
+                    },
+                    "ip": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": "number"
+                    },
+                    "latencyMs": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "ip",
+                    "latencyMs",
+                    "port",
+                    "streamId"
+                ]
+            }
+        }
+    }
+}

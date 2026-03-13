@@ -1,0 +1,615 @@
+{
+  "$schema": "http://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/schemas/registration-schema.json",
+  "title": "Registration Schema",
+  "type": "object",
+  "required": [
+    "channels"
+  ],
+  "properties": {
+    "channels": {
+      "type": "array",
+      "description": "A list of defined channel objects.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "description": "Short, locally managed unique identifier (max 100 characters).",
+            "maxLength": 100
+          },
+          "channel_type": {
+            "type": "string",
+            "enum": [
+              "SOURCE",
+              "DESTINATION"
+            ]
+          },
+          "settings": {
+            "$ref": "#/$defs/array_of_id_and_values"
+          },
+          "setting_profiles": {
+            "$ref": "#/$defs/profiles"
+          },
+          "connection_protocols": {
+            "type": "array",
+            "description": "An array where every item must be a valid output protocol string.",
+            "items": {
+              "$ref": "#/$defs/supported_protocols"
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "thumbnails": {
+      "description": "Optional metadata for thumbnail configuration.",
+      "$ref": "#/$defs/thumbnails"
+    }
+  },
+  "$defs": {
+    "profiles": {
+      "type": "array",
+      "description": "A list of defined setting profiles.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "info"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "info": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "thumbnails": {
+      "description": "Thumbnail available if present",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The friendly name of the thumbnail configuration."
+          },
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "local_path": {
+            "description": "Protocol supports jpg or png type for thumbnail images.",
+            "type": "string",
+            "pattern": "^(?:/[^/]+)*/?[^/]+\\.(jpg|png)$"
+          }
+        },
+        "required": [
+          "name",
+          "id",
+          "local_path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "item_and_array_of_values": {
+      "type": "object",
+      "description": "Name and info are intended as customer-visible UI descriptors, so be precise please.",
+      "required": [
+        "id",
+        "name",
+        "info"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "info": {
+          "$ref": "#/$defs/info"
+        },
+        "enums": {
+          "type": "object",
+          "required": [
+            "values",
+            "default_value"
+          ],
+          "properties": {
+            "values": {
+              "type": "array",
+              "description": "Enumerates the possible values for this node.  The list that must contain only string values.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "default_value": {
+              "type": "string"
+            }
+          }
+        },
+        "ranges": {
+          "type": "object",
+          "required": [
+            "min",
+            "max",
+            "default_value"
+          ],
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "default_value": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "enums"
+          ]
+        },
+        {
+          "required": [
+            "ranges"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "array_of_id_and_values": {
+      "type": "array",
+      "description": "An array of id:id_and_values",
+      "items": {
+        "$ref": "#/$defs/item_and_array_of_values"
+      }
+    },
+    "name_and_value": {
+      "type": "object",
+      "description": "A simple name:value pair",
+      "required": [
+        "name",
+        "info",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "info": {
+          "$ref": "#/$defs/info"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "array_of_name_and_value": {
+      "type": "array",
+      "description": "An array of <name:list of value>",
+      "items": {
+        "$ref": "#/$defs/name_and_value"
+      }
+    },
+    "id_and_value": {
+      "type": "object",
+      "description": "A simple id:value pair",
+      "required": [
+        "id",
+        "value"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "to be run-time validated against possible values in registration json"
+        }
+      },
+      "additionalProperties": false
+    },
+    "array_of_id_and_value": {
+      "type": "array",
+      "description": "An array of id:value pairs",
+      "items": {
+        "$ref": "#/$defs/id_and_value"
+      }
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "info": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "ip_address": {
+      "type": "string",
+      "format": "ipv4",
+      "description": "A standard IPv4 address."
+    },
+    "state": {
+      "type": "string",
+      "default": "IDLE",
+      "enum": [
+        "ACTIVE",
+        "IDLE"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "description": "Short, locally managed unique identifier (max 100 characters).",
+      "maxLength": 100
+    },
+    "channel_type": {
+      "type": "string",
+      "enum": [
+        "SOURCE",
+        "DESTINATION"
+      ]
+    },
+    "aes128_passcode": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{32}$",
+      "errorMessage": {
+        "pattern": "AES-128 passcode must be exactly 32 hexadecimal characters (0-9, a-f, A-F)"
+      }
+    },
+    "aes256_passcode": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "errorMessage": {
+        "pattern": "AES-256 passcode must be exactly 64 hexadecimal characters (0-9, a-f, A-F)"
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Defines the encryption type and key.",
+      "maxProperties": 1,
+      "properties": {
+        "aes128_passcode": {
+          "$ref": "#/$defs/aes128_passcode"
+        },
+        "aes256_passcode": {
+          "$ref": "#/$defs/aes256_passcode"
+        },
+        "none": {
+          "type": "null",
+          "description": "Indicates no encryption is used."
+        }
+      },
+      "additionalProperties": false
+    },
+    "supported_protocols": {
+      "type": "string",
+      "description": "This is the complete list currently supposed by the CDD Protocol.",
+      "enum": [
+        "srt_listener",
+        "srt_caller",
+        "zixi_listener",
+        "zixi_caller",
+        "rist_caller",
+        "rist_listener"
+      ]
+    },
+    "supported_protocols_array": {
+      "type": "array",
+      "description": "An array where every item must be a valid output protocol string.",
+      "items": {
+        "$ref": "#/$defs/supported_protocols"
+      },
+      "minItems": 1
+    },
+    "zixi_caller": {
+      "type": "object",
+      "description": "Configuration for pushing streams using Zixi protocol.",
+      "properties": {
+        "stream_id": {
+          "type": "string",
+          "description": "Unique identifier for the Zixi stream."
+        },
+        "ip": {
+          "description": "The IP address of the Zixi receiver.",
+          "$ref": "#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "description": "The port of the Zixi receiver.",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "description": "Target buffer latency in milliseconds.",
+          "minimum": 200,
+          "maximum": 10000
+        },
+        "encryption": {
+          "description": "Encryption configuration for Zixi stream.",
+          "$ref": "#/$defs/encryption"
+        }
+      },
+      "required": [
+        "ip",
+        "port",
+        "latency_ms",
+        "stream_id",
+        "encryption"
+      ],
+      "additionalProperties": false
+    },
+    "rist_caller": {
+      "type": "object",
+      "description": "Note: stream_id is required in the schema and typically by the endpoint for session identification.",
+      "properties": {
+        "stream_id": {
+          "type": "string",
+          "description": "Unique identifier for the RIST stream session to be initiated."
+        },
+        "mode": {
+          "type": "string",
+          "description": "The RIST operating mode.",
+          "enum": [
+            "simple",
+            "main"
+          ]
+        },
+        "ip": {
+          "description": "The target IP address to connect to.",
+          "$ref": "#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "description": "The target port to connect to.",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "description": "Target buffer size/latency for error correction (in milliseconds).",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "encryption": {
+          "description": "Encryption configuration for the RIST stream.",
+          "$ref": "#/$defs/encryption"
+        }
+      },
+      "required": [
+        "mode",
+        "ip",
+        "port",
+        "latency_ms",
+        "encryption",
+        "stream_id"
+      ],
+      "additionalProperties": false
+    },
+    "srt_listener": {
+      "description": "Note: stream_id is not required in the schema but may be by the endpoint",
+      "type": "object",
+      "properties": {
+        "stream_id": {
+          "type": "string"
+        },
+        "ip": {
+          "$ref": "#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "encryption": {
+          "description": "encryption is required, but can specify encryption: {}",
+          "$ref": "#/$defs/encryption"
+        }
+      },
+      "required": [
+        "ip",
+        "port",
+        "latency_ms",
+        "encryption"
+      ],
+      "additionalProperties": false
+    },
+    "srt_caller": {
+      "description": "Note: stream_id is not required in the schema but may be by the endpoint",
+      "type": "object",
+      "properties": {
+        "stream_id": {
+          "type": "string"
+        },
+        "ip": {
+          "$ref": "#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "encryption": {
+          "description": "encryption is required, but can specify encryption: {}",
+          "$ref": "#/$defs/encryption"
+        }
+      },
+      "required": [
+        "ip",
+        "port",
+        "latency_ms",
+        "encryption",
+        "stream_id"
+      ],
+      "additionalProperties": false
+    },
+    "zixi_listener": {
+      "type": "object",
+      "description": "Configuration for pushing streams using Zixi protocol.",
+      "properties": {
+        "stream_id": {
+          "type": "string",
+          "description": "Unique identifier for the Zixi stream."
+        },
+        "ip": {
+          "description": "The IP address of the Zixi receiver.",
+          "$ref": "#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "description": "The port of the Zixi receiver.",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "description": "Target buffer latency in milliseconds.",
+          "minimum": 200,
+          "maximum": 10000
+        },
+        "encryption": {
+          "description": "Encryption configuration for Zixi stream.",
+          "$ref": "#/$defs/encryption"
+        }
+      },
+      "required": [
+        "ip",
+        "port",
+        "latency_ms",
+        "stream_id",
+        "encryption"
+      ],
+      "additionalProperties": false
+    },
+    "arq_metrics": {
+      "type": "object",
+      "properties": {
+        "total_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dropped_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "recovered_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unrecovered_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "resent_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fec_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fec_recovered_packets": {
+          "type": "number",
+          "minimum": 0
+        },
+        "bitrate_bps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rtt": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rtt_variance": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "rist_listener": {
+      "type": "object",
+      "description": "Note: stream_id is not required in the schema but may be by the endpoint",
+      "properties": {
+        "stream_id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "description": "The RIST operating mode.",
+          "enum": [
+            "simple",
+            "main"
+          ]
+        },
+        "ip": {
+          "description": "The local IP address to listen on.",
+          "$ref": "#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "description": "The local port to listen on.",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "description": "Target buffer size/latency for error correction (in milliseconds).",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "encryption": {
+          "description": "Encryption configuration for the RIST stream.",
+          "$ref": "#/$defs/encryption"
+        }
+      },
+      "required": [
+        "mode",
+        "ip",
+        "port",
+        "latency_ms",
+        "encryption"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

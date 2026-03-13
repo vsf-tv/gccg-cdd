@@ -23,9 +23,9 @@ from typing import Optional, Union
 import cattr
 
 # Generated model imports
-from internal_api_client.models.authenticate_response_content import AuthenticateResponseContent
-from internal_api_client.models.host_settings import HostSettings
-from internal_api_client.models.rotate_certificates_request_content import RotateCertificatesRequestContent
+from tr12_api_client.models.authenticate_response_content import AuthenticateResponseContent
+from tr12_api_client.models.host_settings import HostSettings
+from tr12_api_client.models.rotate_certificates_request_content import RotateCertificatesRequestContent
 
 # Local application imports
 from cdd_internal_models import ConnectionSettings

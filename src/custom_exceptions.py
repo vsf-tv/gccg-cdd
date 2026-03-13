@@ -23,7 +23,7 @@
 """
 from custom_logger import logger
 from typing import Optional
-from openapi_client.models.error_details import ErrorDetails
+from cdd_sdk_client.models.error_details import ErrorDetails
 
 
 class SDKBaseException(Exception):

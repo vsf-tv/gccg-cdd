@@ -1,0 +1,51 @@
+{
+  "channels": [
+    {
+      "name": "Camera Channel 1",
+      "id": "CH1",
+      "channel_type": "SOURCE",
+      "connection_protocols": [
+        "srt_caller"
+      ],
+      "settings": [
+        {
+          "name": "pan",
+          "info": "Relative Camera Pan Movement (-100, 100)",
+          "id": "PAN01",
+          "ranges": {
+            "min": -100,
+            "max": 100,
+            "default_value": 0
+          }
+        },
+        {
+          "name": "tilt",
+          "info": "Relative Camera Tilt Movement (-100, 100)",
+          "id": "TILT01",
+          "ranges": {
+            "min": -100,
+            "max": 100,
+            "default_value": 0
+          }
+        },
+        {
+          "name": "zoom",
+          "info": "Relative Camera Zoom Movement (-100, 100)",
+          "id": "ZOOM01",
+          "ranges": {
+            "min": -100,
+            "max": 100,
+            "default_value": 0
+          }
+        }
+      ]
+    }
+  ],
+  "thumbnails": [
+    {
+      "name": "Camera Preview",
+      "id": "MainLense",
+      "local_path": "/tmp/image_sdi.jpg"
+    }
+  ]
+}

@@ -16,18 +16,18 @@ import time
 from typing import Optional
 
 # Generated model imports
-from internal_api_client.api.default_api import DefaultApi
-from internal_api_client.api_client import ApiClient
-from internal_api_client.configuration import Configuration
-from internal_api_client.exceptions import ApiException
-from internal_api_client.models.authenticate_response_content import AuthStatus
-from internal_api_client.models.authenticate_request_content import AuthenticateRequestContent
-from internal_api_client.models.authenticate_response_content import AuthenticateResponseContent
-from internal_api_client.models.pair_request_content import PairRequestContent
-from internal_api_client.models.pair_failure_reason import PairFailureReason
-from internal_api_client.models.pair_response_content import PairResponseContent
-from internal_api_client.models.protocol_version import ProtocolVersion
-from internal_api_client.models.success import Success
+from tr12_api_client.api.default_api import DefaultApi
+from tr12_api_client.api_client import ApiClient
+from tr12_api_client.configuration import Configuration
+from tr12_api_client.exceptions import ApiException
+from tr12_api_client.models.authenticate_response_content import AuthStatus
+from tr12_api_client.models.authenticate_request_content import AuthenticateRequestContent
+from tr12_api_client.models.authenticate_response_content import AuthenticateResponseContent
+from tr12_api_client.models.pair_request_content import PairRequestContent
+from tr12_api_client.models.pair_failure_reason import PairFailureReason
+from tr12_api_client.models.pair_response_content import PairResponseContent
+from tr12_api_client.models.protocol_version import ProtocolVersion
+from tr12_api_client.models.success import Success
 
 # Local application imports
 from credentialstore import CredentialStore

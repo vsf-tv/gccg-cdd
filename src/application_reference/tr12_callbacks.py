@@ -11,11 +11,11 @@ Keys used in callbacks match Setting.name from registration.json (BUG WORKAROUND
 
 from typing import Optional
 
-from openapi_client.models.connection import Connection
-from openapi_client.models.srt_caller import SrtCaller
-from openapi_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
-from openapi_client.models.transport_protocol import TransportProtocol
-from openapi_client.models.channel_state import ChannelState
+from cdd_sdk_client.models.connection import Connection
+from cdd_sdk_client.models.srt_caller import SrtCaller
+from cdd_sdk_client.models.srt_caller_transport_protocol import SrtCallerTransportProtocol
+from cdd_sdk_client.models.transport_protocol import TransportProtocol
+from cdd_sdk_client.models.channel_state import ChannelState
 
 from application_reference.simple_encoder import Encoder
 

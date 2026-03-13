@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/schemas/definitions/transport_protocols/rist_caller.json",
+  "title": "RIST Caller Protocol Configuration",
+  "$defs": {
+    "rist_caller": {
+      "type": "object",
+      "description": "Configuration for pushing streams via RIST (Reliable Internet Stream Transport).",
+      "description": "Note: stream_id is required in the schema and typically by the endpoint for session identification.",
+      "properties": {
+        "stream_id": {
+          "type": "string",
+          "description": "Unique identifier for the RIST stream session to be initiated."
+        },
+        "mode": {
+          "type": "string",
+          "description": "The RIST operating mode.",
+          "enum": ["simple", "main"]
+        },
+        "ip": {
+          "description": "The target IP address to connect to.",
+          "$ref": "../primitives.json#/$defs/ip_address"
+        },
+        "port": {
+          "type": "integer",
+          "description": "The target port to connect to.",
+          "minimum": 1024,
+          "maximum": 49151
+        },
+        "latency_ms": {
+          "type": "integer",
+          "description": "Target buffer size/latency for error correction (in milliseconds).",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "encryption": {
+          "description": "Encryption configuration for the RIST stream.",
+          "$ref": "../encryption.json#/$defs/encryption"
+        }
+      },
+      "required": [
+        "mode",
+        "ip",
+        "port",
+        "latency_ms",
+        "encryption",
+        "stream_id"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
