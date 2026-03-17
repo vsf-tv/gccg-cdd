@@ -207,7 +207,6 @@ def ensure_single_instance():
 
 def main(device_local_id: str,
          certs_path: str,
-         tmp_path: str,
          log_path: str,
          ip: str,
          port: int,
@@ -244,7 +243,9 @@ if __name__ == "__main__":
     """
 
     # Prevents multiple instances of the SDK from running on one system.
-    #lock = ensure_single_instance()
+    # This is an example of what a process management system like 'initd' should handle.
+    # Disabled here.
+    # lock = ensure_single_instance()
 
     parser = argparse.ArgumentParser(
         description="Client Device Discovery",
@@ -257,13 +258,6 @@ if __name__ == "__main__":
         required=True,
         type=str,
         help="Enter a path for persistent cert storage",
-    )
-
-    parser.add_argument(
-        "--tmp_path",
-        required=True,
-        type=str,
-        help="Enter a writable path for temporary storage",
     )
     parser.add_argument(
         "--log_path",
@@ -298,7 +292,6 @@ if __name__ == "__main__":
     main(
         device_local_id=args.internal_device_id,
         certs_path=args.certs_path,
-        tmp_path=args.tmp_path,
         log_path=args.log_path,
         ip=args.ip,
         port=args.port,

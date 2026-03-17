@@ -315,6 +315,7 @@ Setup command line arguments.  The following syntax assumes BASH syntax, so adju
 The SDK will store credentials $CERTS_PATH/$ID when claimed.
 > export CERTS_PATH="<writeable and persistent folder, not /tmp>"
 > export ID=my_device_123   
+> export TMP_DRIVE=/tmp/
 ```
 
 Step 1:
@@ -324,7 +325,8 @@ Start the SDK Daemon.
 
 The SDK will start, but will otherwise do nothing except quietly await API requests from the ARD.  
 In Terminal Window #1
-1> python3 src/server_flask.py --certs_path $CERTS_PATH --registration_file_path <cdd sdk path>/src/payloads/1_channel_encoder/registration.json  --port 8603 --ip 127.0.0.1 --tmp_path /tmp --device_type [SOURCE | DESTINATION | BOTH] --internal_device_id  $ID --log_path /tmp/ 
+>  python3 src/server_flask.py --certs_path $CERTS_PATH --port 8603 --ip 127.0.0.1 --device_type SOURCE --internal_device_id $ID --log_path $TMP_DRIVE
+
 ``` 
 
 Step 2:
