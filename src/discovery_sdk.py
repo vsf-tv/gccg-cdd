@@ -910,9 +910,10 @@ class CddSdk(object):
         """
         try:
             tn_json = json.loads(message.payload.decode("utf-8"))
+            logger.info(f"Got a new thumbnail subscription request: {tn_json}")
             # Pydantic model handles camelCase via aliases
             thumbnail_subscription = RequestThumbnailRequestContent.from_dict(tn_json)
-            logger.info(f"Got a new thumbnail subscription request")
+
             self.thumbnail_manager.update_thumbnail(thumbnail_subscription)
         except json.JSONDecodeError as e:
             logger.info(f"Could not process thumbnail subscription update.  Msg: {e}")

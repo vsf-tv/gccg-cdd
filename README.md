@@ -559,10 +559,15 @@ The first response may be empty as the new subscription is being processed.
 The <thumbnail_id> is provided in the registration_file returned via the DescribeDevice API
 This file is provided by the application reference design on SDK startup.  See: TR-12 Message Protocol
 
-Request Path: <base_endpoint>/device/{device-id}?source=<thumbnail_id>
+Request Path: <base_endpoint>/thumbnail/{device-id}?source=SDI-1
 Request Type: GET
-e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01?source=SDI-1
-e.g.  <base_endpoint>/device/001XI02IJ2FtSIirk01?source=HDMI-1
+
+e.g.  <base_endpoint>/thumbnail/001XI02IJ2FtSIirk01?source=SDI-1
+e.g.  <base_endpoint>/thumbnail/001XI02IJ2FtSIirk01?source=HDMI-1
+
+Note: The first request will make the subscription request to the client.  
+But an image will take a second or arrive and be available on the host service API.
+Subsequent requests will include the latest <base64_image> payload. 
 
 Expected Host Service Response:
 {
@@ -576,7 +581,7 @@ Expected Host Service Response:
     }
 }
 
-To view the image you must base64 decode base64_image and open in an appropriate jpg or png viewing application.  
+To view the returned image: decode base64_image and open in an appropriate jpg or png viewing application.  
 
 ```
 
