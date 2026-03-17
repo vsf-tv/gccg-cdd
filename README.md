@@ -313,9 +313,11 @@ Step 0
 Setup command line arguments.  The following syntax assumes BASH syntax, so adjust accordingly.  
 
 The SDK will store credentials $CERTS_PATH/$ID when claimed.
+> cd <sdk root>
 > export CERTS_PATH="<writeable and persistent folder, not /tmp>"
 > export ID=my_device_123   
 > export TMP_DRIVE=/tmp/
+> export PYTHONPATH="<sdk root>":$PYTHONPATH
 ```
 
 Step 1:
@@ -334,7 +336,10 @@ Step 2:
 
 Start the Application Reference Design.
 In Terminal Window #2
-2> python3 ./src/application_reference/application.py --host_id vsf_test_host
+> cd <sdk root>
+> source venv/bin/activate
+> export PYTHONPATH="<sdk root>":$PYTHONPATH
+> python3 ./src/application_reference/application.py --host_id vsf_test_host
 
 What happens: 
 
