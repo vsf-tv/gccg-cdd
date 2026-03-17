@@ -46,7 +46,7 @@ from cdd_sdk_client.models.settings_choice import SettingsChoice
 from cdd_sdk_client.models.simple_settings import SimpleSettings
 from cdd_sdk_client.models.device_status import DeviceStatus
 
-from application_reference.tr12_callbacks import Callbacks
+from tr12_callbacks import Callbacks
 
 logger = logging.getLogger(__name__)
 
