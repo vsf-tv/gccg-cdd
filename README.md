@@ -1,3 +1,9 @@
+# Deprecated:
+*** This Python based TR-12 Client is no longer being actively maintained *** 
+Refer use the Go-Based Client and Server that tracks updated so the TR-12-Model here: (https://github.com/vsf-tv/TR-12-Client-and-Host-Go/
+Go offers a more portable and lightweight language option more suited to embedded systems.  
+TR-12-Client-and-Host-Go repository also includes a complete TR-12 Server (source code)
+
 # Client Device Discovery (CDD) Client SDK: TR12
 Discovery, monitoring and connection management of streaming video devices using an internet-secure, cloud 
 and NAT friendly, scalable, pairing and communication protocol.
